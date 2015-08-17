@@ -65,7 +65,7 @@ macro_rules! tuple_default {
 }
 ```
 
-> **JFTE**: we *could* have simply used `$tup_tys::default()`.
+> **<abbr title="Just for this example">JFTE</abbr>**: we *could* have simply used `$tup_tys::default()`.
 
 Here, we are not actually *using* the matched types.  Instead, we throw them away and instead replace them with a single, repeated expression.  To put it another way, we don't care *what* the types are, only *how many* there are.
 
