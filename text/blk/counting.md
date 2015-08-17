@@ -1,6 +1,6 @@
 % Counting
 
-# Repetition with replacement
+## Repetition with replacement
 
 Counting things in a macro is a surprisingly tricky task.  The simplest way is to use replacement with a repetition match.
 
@@ -22,7 +22,7 @@ This is much better, but will likely *crash the compiler* with inputs of around 
 
 The compiler must parse this into an AST, which will produce what is effectively a perfectly unbalanced binary tree 500+ levels deep.
 
-# Recursion
+## Recursion
 
 An older approach is to use recursion.
 
@@ -89,7 +89,7 @@ fn main() {
 
 This particular formulation will work up to ~1,200 tokens.
 
-# Slice length
+## Slice length
 
 A third approach is to help the compiler construct a shallow AST that won't lead to a stack overflow.  This can be done by constructing an array literal and calling the `len` method.
 

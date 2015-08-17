@@ -2,7 +2,7 @@
 
 Parsing and expansion patterns.
 
-# Internal rules
+## Internal rules
 
 ```rust
 #[macro_export]
@@ -38,7 +38,7 @@ macro_rules! crate_name_util {
 }
 ```
 
-# Repetition replacement
+## Repetition replacement
 
 ```rust
 macro_rules! replace_expr {
@@ -69,7 +69,7 @@ macro_rules! tuple_default {
 
 Here, we are not actually *using* the matched types.  Instead, we throw them away and instead replace them with a single, repeated expression.  To put it another way, we don't care *what* the types are, only *how many* there are.
 
-# Trailing separators
+## Trailing separators
 
 ```rust
 macro_rules! match_exprs {
