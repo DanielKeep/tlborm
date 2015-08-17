@@ -48,8 +48,8 @@
 
     <h1 class="title">Counting</h1>
     
-<h1 id="repetition-with-replacement" class='section-header'><a
-                           href="#repetition-with-replacement">Repetition with replacement</a></h1>
+<h2 id="repetition-with-replacement" class='section-header'><a
+                           href="#repetition-with-replacement">Repetition with replacement</a></h2>
 <p>Counting things in a macro is a surprisingly tricky task.  The simplest way is to use replacement with a repetition match.</p>
 <span class='rusttest'>fn main() {
     macro_rules! replace_expr {
@@ -78,8 +78,8 @@
 
 <p>The compiler must parse this into an AST, which will produce what is effectively a perfectly unbalanced binary tree 500+ levels deep.</p>
 
-<h1 id="recursion" class='section-header'><a
-                           href="#recursion">Recursion</a></h1>
+<h2 id="recursion" class='section-header'><a
+                           href="#recursion">Recursion</a></h2>
 <p>An older approach is to use recursion.</p>
 <span class='rusttest'>fn main() {
     macro_rules! count_tts {
@@ -194,8 +194,8 @@ fn main() {
 
 <p>This particular formulation will work up to ~1,200 tokens.</p>
 
-<h1 id="slice-length" class='section-header'><a
-                           href="#slice-length">Slice length</a></h1>
+<h2 id="slice-length" class='section-header'><a
+                           href="#slice-length">Slice length</a></h2>
 <p>A third approach is to help the compiler construct a shallow AST that won&#39;t lead to a stack overflow.  This can be done by constructing an array literal and calling the <code>len</code> method.</p>
 <span class='rusttest'>fn main() {
     macro_rules! replace_expr {

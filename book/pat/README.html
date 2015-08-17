@@ -49,8 +49,60 @@
     <h1 class="title">Patterns</h1>
     <p>Parsing and expansion patterns.</p>
 
-<h1 id="internal-rules" class='section-header'><a
-                           href="#internal-rules">Internal rules</a></h1><span class='rusttest'>fn main() {
+<h2 id="incremental-tt-munchers" class='section-header'><a
+                           href="#incremental-tt-munchers">Incremental TT munchers</a></h2><span class='rusttest'>fn main() {
+    macro_rules! mixed_rules {
+        () =&gt; {};
+        (trace $name:ident; $($tail:tt)*) =&gt; {
+            {
+                println!(concat!(stringify!($name), &quot; = {:?}&quot;), $name);
+                mixed_rules!($($tail)*);
+            }
+        };
+        (trace $name:ident = $init:expr; $($tail:tt)*) =&gt; {
+            {
+                let $name = $init;
+                println!(concat!(stringify!($name), &quot; = {:?}&quot;), $name);
+                mixed_rules!($($tail)*);
+            }
+        };
+    }
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>mixed_rules</span> {
+    () <span class='op'>=&gt;</span> {};
+    (<span class='ident'>trace</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>name</span>:<span class='ident'>ident</span>; $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>=&gt;</span> {
+        {
+            <span class='macro'>println</span><span class='macro'>!</span>(<span class='macro'>concat</span><span class='macro'>!</span>(<span class='macro'>stringify</span><span class='macro'>!</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>name</span>), <span class='string'>&quot; = {:?}&quot;</span>), <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>name</span>);
+            <span class='macro'>mixed_rules</span><span class='macro'>!</span>($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>)<span class='op'>*</span>);
+        }
+    };
+    (<span class='ident'>trace</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>name</span>:<span class='ident'>ident</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>init</span>:<span class='ident'>expr</span>; $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>=&gt;</span> {
+        {
+            <span class='kw'>let</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>name</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>init</span>;
+            <span class='macro'>println</span><span class='macro'>!</span>(<span class='macro'>concat</span><span class='macro'>!</span>(<span class='macro'>stringify</span><span class='macro'>!</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>name</span>), <span class='string'>&quot; = {:?}&quot;</span>), <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>name</span>);
+            <span class='macro'>mixed_rules</span><span class='macro'>!</span>($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>)<span class='op'>*</span>);
+        }
+    };
+}</pre>
+
+<p>This pattern is perhaps the <em>most powerful</em> macro parsing technique available, allowing one to parse grammars of significant complexity.</p>
+
+<p>A &quot;TT muncher&quot; is a recursive macro that works by incrementally processing its input one step at a time.  At each step, it matches and removes (munches) some sequence of tokens from the start of its input, generates some intermediate output, then recurses on the input tail.</p>
+
+<p>The reason for &quot;TT&quot; in the name specifically is that the unprocessed part of the input is <em>always</em> captured as <code>$($tail:tt)*</code>.  This is done as a <code>tt</code> repetition is the only way to <em>losslessly</em> capture part of a macro&#39;s input.</p>
+
+<p>The only hard restrictions on TT munchers are those imposed on the macro system as a whole:</p>
+
+<ul>
+<li>You can only match against literals and grammar constructs which can be captured by <code>macro_rules!</code>.</li>
+<li>You cannot match unbalanced groups.</li>
+</ul>
+
+<p>It is important, however, to keep the macro recursion limit in mind.  <code>macro_rules!</code> does not have <em>any</em> form of tail recursion elimination or optimisation.  It is recommended that, when writing a TT muncher, you make reasonable efforts to keep recursion as limited as possible.  This can be done by adding additional rules to account for variation in the input (as opposed to recursion into an intermediate layer), or by making compromises on the input syntax to make using standard repetitions more tractable.</p>
+
+<h2 id="internal-rules" class='section-header'><a
+                           href="#internal-rules">Internal rules</a></h2><span class='rusttest'>fn main() {
     #[macro_export]
     macro_rules! foo {
         (@as_expr $e:expr) =&gt; {$e};
@@ -103,8 +155,120 @@
     <span class='comment'>// ...</span>
 }</pre>
 
-<h1 id="repetition-replacement" class='section-header'><a
-                           href="#repetition-replacement">Repetition replacement</a></h1><span class='rusttest'>fn main() {
+<h2 id="push-down-accumulation" class='section-header'><a
+                           href="#push-down-accumulation">Push-down Accumulation</a></h2><span class='rusttest'>fn main() {
+    macro_rules! init_array {
+        (@accum (0, $_e:expr) -&gt; ($($body:tt)*))
+            =&gt; {init_array!(@as_expr [$($body)*])};
+        (@accum (1, $e:expr) -&gt; ($($body:tt)*))
+            =&gt; {init_array!(@accum (0, $e) -&gt; ($($body)* $e,))};
+        (@accum (2, $e:expr) -&gt; ($($body:tt)*))
+            =&gt; {init_array!(@accum (1, $e) -&gt; ($($body)* $e,))};
+        (@accum (3, $e:expr) -&gt; ($($body:tt)*))
+            =&gt; {init_array!(@accum (2, $e) -&gt; ($($body)* $e,))};
+        (@as_expr $e:expr) =&gt; {$e};
+        [$e:expr; $n:tt] =&gt; {
+            {
+                let e = $e;
+                init_array!(@accum ($n, e.clone()) -&gt; ())
+            }
+        };
+    }
+    
+    let strings: [String; 3] = init_array![String::from(&quot;hi!&quot;); 3];
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>init_array</span> {
+    (<span class='kw-2'>@</span><span class='ident'>accum</span> (<span class='number'>0</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>_e</span>:<span class='ident'>expr</span>) <span class='op'>-&gt;</span> ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>body</span>:<span class='ident'>tt</span>)<span class='op'>*</span>))
+        <span class='op'>=&gt;</span> {<span class='macro'>init_array</span><span class='macro'>!</span>(<span class='kw-2'>@</span><span class='ident'>as_expr</span> [$(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>body</span>)<span class='op'>*</span>])};
+    (<span class='kw-2'>@</span><span class='ident'>accum</span> (<span class='number'>1</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>) <span class='op'>-&gt;</span> ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>body</span>:<span class='ident'>tt</span>)<span class='op'>*</span>))
+        <span class='op'>=&gt;</span> {<span class='macro'>init_array</span><span class='macro'>!</span>(<span class='kw-2'>@</span><span class='ident'>accum</span> (<span class='number'>0</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>) <span class='op'>-&gt;</span> ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>body</span>)<span class='op'>*</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>,))};
+    (<span class='kw-2'>@</span><span class='ident'>accum</span> (<span class='number'>2</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>) <span class='op'>-&gt;</span> ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>body</span>:<span class='ident'>tt</span>)<span class='op'>*</span>))
+        <span class='op'>=&gt;</span> {<span class='macro'>init_array</span><span class='macro'>!</span>(<span class='kw-2'>@</span><span class='ident'>accum</span> (<span class='number'>1</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>) <span class='op'>-&gt;</span> ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>body</span>)<span class='op'>*</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>,))};
+    (<span class='kw-2'>@</span><span class='ident'>accum</span> (<span class='number'>3</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>) <span class='op'>-&gt;</span> ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>body</span>:<span class='ident'>tt</span>)<span class='op'>*</span>))
+        <span class='op'>=&gt;</span> {<span class='macro'>init_array</span><span class='macro'>!</span>(<span class='kw-2'>@</span><span class='ident'>accum</span> (<span class='number'>2</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>) <span class='op'>-&gt;</span> ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>body</span>)<span class='op'>*</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>,))};
+    (<span class='kw-2'>@</span><span class='ident'>as_expr</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> {<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>};
+    [<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>; <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>n</span>:<span class='ident'>tt</span>] <span class='op'>=&gt;</span> {
+        {
+            <span class='kw'>let</span> <span class='ident'>e</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>;
+            <span class='macro'>init_array</span><span class='macro'>!</span>(<span class='kw-2'>@</span><span class='ident'>accum</span> (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>n</span>, <span class='ident'>e</span>.<span class='ident'>clone</span>()) <span class='op'>-&gt;</span> ())
+        }
+    };
+}
+
+<span class='kw'>let</span> <span class='ident'>strings</span>: [<span class='ident'>String</span>; <span class='number'>3</span>] <span class='op'>=</span> <span class='macro'>init_array</span><span class='macro'>!</span>[<span class='ident'>String</span>::<span class='ident'>from</span>(<span class='string'>&quot;hi!&quot;</span>); <span class='number'>3</span>];</pre>
+
+<p>All macros in Rust <strong>must</strong> result in a complete, supported syntax element (such as an expression, item, <em>etc.</em>).  This means that it is impossible to have a macro expand to a partial construct.</p>
+
+<p>One might hope that the above example could be more directly expressed like so:</p>
+<span class='rusttest'>fn main() {
+    macro_rules! init_array {
+        (@accum 0, $_e:expr) =&gt; {/* empty */};
+        (@accum 1, $e:expr) =&gt; {$e};
+        (@accum 2, $e:expr) =&gt; {$e, init_array!(@accum 1, $e)};
+        (@accum 3, $e:expr) =&gt; {$e, init_array!(@accum 2, $e)};
+        [$e:expr; $n:tt] =&gt; {
+            {
+                let e = $e;
+                [init_array!(@accum $n, e)]
+            }
+        };
+    }
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>init_array</span> {
+    (<span class='kw-2'>@</span><span class='ident'>accum</span> <span class='number'>0</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>_e</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> {<span class='comment'>/* empty */</span>};
+    (<span class='kw-2'>@</span><span class='ident'>accum</span> <span class='number'>1</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> {<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>};
+    (<span class='kw-2'>@</span><span class='ident'>accum</span> <span class='number'>2</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> {<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>, <span class='macro'>init_array</span><span class='macro'>!</span>(<span class='kw-2'>@</span><span class='ident'>accum</span> <span class='number'>1</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>)};
+    (<span class='kw-2'>@</span><span class='ident'>accum</span> <span class='number'>3</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> {<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>, <span class='macro'>init_array</span><span class='macro'>!</span>(<span class='kw-2'>@</span><span class='ident'>accum</span> <span class='number'>2</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>)};
+    [<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>; <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>n</span>:<span class='ident'>tt</span>] <span class='op'>=&gt;</span> {
+        {
+            <span class='kw'>let</span> <span class='ident'>e</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>;
+            [<span class='macro'>init_array</span><span class='macro'>!</span>(<span class='kw-2'>@</span><span class='ident'>accum</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>n</span>, <span class='ident'>e</span>)]
+        }
+    };
+}</pre>
+
+<p>The expectation is that the expansion of the array literal would proceed as follows:</p>
+<span class='rusttest'>fn main() {
+                [init_array!(@accum 3, e)]
+                [e, init_array!(@accum 2, e)]
+                [e, e, init_array!(@accum 1, e)]
+                [e, e, e]
+    
+}</span><pre class='rust rust-example-rendered'>
+            [<span class='macro'>init_array</span><span class='macro'>!</span>(<span class='kw-2'>@</span><span class='ident'>accum</span> <span class='number'>3</span>, <span class='ident'>e</span>)]
+            [<span class='ident'>e</span>, <span class='macro'>init_array</span><span class='macro'>!</span>(<span class='kw-2'>@</span><span class='ident'>accum</span> <span class='number'>2</span>, <span class='ident'>e</span>)]
+            [<span class='ident'>e</span>, <span class='ident'>e</span>, <span class='macro'>init_array</span><span class='macro'>!</span>(<span class='kw-2'>@</span><span class='ident'>accum</span> <span class='number'>1</span>, <span class='ident'>e</span>)]
+            [<span class='ident'>e</span>, <span class='ident'>e</span>, <span class='ident'>e</span>]</pre>
+
+<p>However, this would require each intermediate step to expand to an incomplete expression.  Even though the intermediate results will never be used <em>outside</em> of a macro context, it is still forbidden.</p>
+
+<p>Push-down, however, allows us to incrementally build up a sequence of tokens without needing to actually have a complete construct at any point prior to completion.  In the example given at the top, the sequence of macro invocations proceeds as follows:</p>
+<span class='rusttest'>fn main() {
+    init_array! { String:: from ( &quot;hi!&quot; ) ; 3 }
+    init_array! { @ accum ( 3 , e . clone (  ) ) -&gt; (  ) }
+    init_array! { @ accum ( 2 , e.clone() ) -&gt; ( e.clone() , ) }
+    init_array! { @ accum ( 1 , e.clone() ) -&gt; ( e.clone() , e.clone() , ) }
+    init_array! { @ accum ( 0 , e.clone() ) -&gt; ( e.clone() , e.clone() , e.clone() , ) }
+    init_array! { @ as_expr [ e.clone() , e.clone() , e.clone() , ] }
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='macro'>init_array</span><span class='macro'>!</span> { <span class='ident'>String</span>:: <span class='ident'>from</span> ( <span class='string'>&quot;hi!&quot;</span> ) ; <span class='number'>3</span> }
+<span class='macro'>init_array</span><span class='macro'>!</span> { <span class='kw-2'>@</span> <span class='ident'>accum</span> ( <span class='number'>3</span> , <span class='ident'>e</span> . <span class='ident'>clone</span> (  ) ) <span class='op'>-&gt;</span> (  ) }
+<span class='macro'>init_array</span><span class='macro'>!</span> { <span class='kw-2'>@</span> <span class='ident'>accum</span> ( <span class='number'>2</span> , <span class='ident'>e</span>.<span class='ident'>clone</span>() ) <span class='op'>-&gt;</span> ( <span class='ident'>e</span>.<span class='ident'>clone</span>() , ) }
+<span class='macro'>init_array</span><span class='macro'>!</span> { <span class='kw-2'>@</span> <span class='ident'>accum</span> ( <span class='number'>1</span> , <span class='ident'>e</span>.<span class='ident'>clone</span>() ) <span class='op'>-&gt;</span> ( <span class='ident'>e</span>.<span class='ident'>clone</span>() , <span class='ident'>e</span>.<span class='ident'>clone</span>() , ) }
+<span class='macro'>init_array</span><span class='macro'>!</span> { <span class='kw-2'>@</span> <span class='ident'>accum</span> ( <span class='number'>0</span> , <span class='ident'>e</span>.<span class='ident'>clone</span>() ) <span class='op'>-&gt;</span> ( <span class='ident'>e</span>.<span class='ident'>clone</span>() , <span class='ident'>e</span>.<span class='ident'>clone</span>() , <span class='ident'>e</span>.<span class='ident'>clone</span>() , ) }
+<span class='macro'>init_array</span><span class='macro'>!</span> { <span class='kw-2'>@</span> <span class='ident'>as_expr</span> [ <span class='ident'>e</span>.<span class='ident'>clone</span>() , <span class='ident'>e</span>.<span class='ident'>clone</span>() , <span class='ident'>e</span>.<span class='ident'>clone</span>() , ] }</pre>
+
+<p>As you can see, each layer adds to the accumulated output until the terminating rule finally emits it as a complete construct.</p>
+
+<p>The only critical part of the above formulation is the use of <code>$($body:tt)*</code> to preserve the output without triggering parsing.  The use of <code>($input) -&gt; ($output)</code> is simply a convention adopted to help clarify the behaviour of such macros.</p>
+
+<p>Push-down accumulation is frequently used as part of <a href="#incremental-tt-munchers">incremental TT munchers</a>, as it allows arbitrarily complex intermediate results to be constructed.</p>
+
+<h2 id="repetition-replacement" class='section-header'><a
+                           href="#repetition-replacement">Repetition replacement</a></h2><span class='rusttest'>fn main() {
     macro_rules! replace_expr {
         ($_t:tt $sub:expr) =&gt; {$sub};
     }
@@ -151,8 +315,8 @@
 
 <p>Here, we are not actually <em>using</em> the matched types.  Instead, we throw them away and instead replace them with a single, repeated expression.  To put it another way, we don&#39;t care <em>what</em> the types are, only <em>how many</em> there are.</p>
 
-<h1 id="trailing-separators" class='section-header'><a
-                           href="#trailing-separators">Trailing separators</a></h1><span class='rusttest'>fn main() {
+<h2 id="trailing-separators" class='section-header'><a
+                           href="#trailing-separators">Trailing separators</a></h2><span class='rusttest'>fn main() {
     macro_rules! match_exprs {
         ($($exprs:expr),* $(,)*) =&gt; {...};
     }
