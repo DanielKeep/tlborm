@@ -6,28 +6,132 @@ BOOK_OUT_PATH = OUT_PATH + '/book'
 STATIC_PATH = 'static'
 RUSTBOOK_OUT_PATH = '_book'
 
+PUBLISH_BRANCH = 'gh-pages'
+
+TEMP_PREFIX = 'tlborm-build-'
+
+import distutils.dir_util
 import os
 import re
 import shutil
 import subprocess
 import sys
+import tempfile
+import time
+from contextlib import contextmanager, ExitStack
 from itertools import chain
 
 TRACE = os.environ.get('TLBORM_TRACE_BUILD', '') != ''
 
 def main():
-    build()
+    args = sys.argv[1:]
+    if args == []:
+        args = ['build']
+
+    def usage():
+        print('Usage: build.py [build | publish | help]')
+        return 1
+    
+    if '--help' in args or 'help' in args or len(args) != 1:
+        return usage()
+
+    if args[0] == 'build':
+        build()
+
+    elif args[0] == 'publish':
+        publish()
+
+    else:
+        return usage()
 
 def build():
+    msg('Building...')
     sh('rustbook', 'build', TEXT_PATH)
 
     if os.path.exists(OUT_PATH):
-        traced(really_rmtree, OUT_PATH)
+        really_rmtree(OUT_PATH)
 
-    traced(shutil.copytree, RUSTBOOK_OUT_PATH, BOOK_OUT_PATH)
-    traced(copy_merge, STATIC_PATH, OUT_PATH)
+    copy_tree(src=RUSTBOOK_OUT_PATH, dst=BOOK_OUT_PATH)
+    copy_merge(src=STATIC_PATH, dst=OUT_PATH)
+    msg('.. done.')
+
+def publish():
+    if sh_eval('git', 'symbolic-ref', '--short', 'HEAD') != 'master':
+        raise 'Not publishing: not on master branch!'
+
+    init_pub_branch()
+
+    msg('Publishing...')
+
+    repo_path = os.getcwd()
+    msg_trace('.. repo_path = %r' % repo_path)
+
+    last_rev = sh_eval('git', 'rev-parse', 'HEAD')
+    last_msg = sh_eval('git', 'log', '-l', '--pretty=%B')
+    msg_trace('.. last_rev = %r' % last_rev)
+    msg_trace('.. last_msg = %r' % last_msg)
+
+    with ExitStack() as stack:
+        master_tmp = stack.enter_context(mkdtemp(prefix=TEMP_PREFIX))
+        gh_pages_tmp = stack.enter_context(mkdtemp(prefix=TEMP_PREFIX))
+        msg_trace('.. master_tmp = %r' % master_tmp)
+        msg_trace('.. gh_pages_tmp = %r' % gh_pages_tmp)
+
+        msg('.. cloning...')
+        sh('git', 'clone', '-qb', 'master', repo_path, master_tmp)
+        sh('git', 'clone', '-qb', PUBLISH_BRANCH, repo_path, gh_pages_tmp)
+
+        with pushd(master_tmp):
+            msg('.. running build...')
+            build()
+
+        msg('.. copying to %s...' % PUBLISH_BRANCH)
+        copy_tree(
+            src=os.path.join(master_tmp, OUT_PATH),
+            dst=gh_pages_tmp)
+
+        with pushd(gh_pages_tmp):
+            msg('.. committing changes...')
+            sh('git', 'add', '.')
+            sh('git', 'commit',
+               '-m', "Update docs for %s" % last_rev[:7])
+
+            sh('git', 'push', '-qu', 'origin', PUBLISH_BRANCH)
+
+    msg('.. done.  Use `git push origin %s` to make changes live.' % PUBLISH_BRANCH)
+
+def init_pub_branch():
+    msg_trace('init_pub_branch()')
+
+    branches = {b[2:].strip()
+                for b
+                in sh_eval('git', 'branch', dont_strip=True).splitlines()}
+    msg_trace('.. branches = %r' % branches)
+    if PUBLISH_BRANCH in branches:
+        msg_trace('.. publish branch exists')
+        return
+
+    msg("Initialising %s branch..." % PUBLISH_BRANCH)
+
+    repo_path = os.getcwd()
+    msg_trace('.. repo_path = %r' % repo_path)
+
+    with ExitStack() as stack:
+        tmp = stack.enter_context(mkdtemp(prefix=TEMP_PREFIX))
+        msg_trace('.. tmp = %r' % tmp)
+
+        msg(".. cloning...")
+        sh('git', 'init', '-q', tmp)
+        with pushd(tmp):
+            sh('git', 'checkout', '-q', '--orphan', PUBLISH_BRANCH)
+            sh('git', 'commit', '-qm', "Initial commit.", '--allow-empty')
+            sh('git', 'remote', 'add', 'origin', repo_path)
+            sh('git', 'push', '-q', 'origin', PUBLISH_BRANCH)
+
+    msg('.. done.')
 
 def copy_merge(src, dst):
+    msg_trace('copy_merge(%r, %r)' % (src, dst))
     names = os.listdir(src)
     if not os.path.exists(dst): os.makedirs(dst)
     for name in names:
@@ -51,6 +155,18 @@ def sh(*cmd):
     except:
         msg_trace('FAILED!')
         raise
+
+def sh_eval(*cmd, codec='utf-8', dont_strip=False):
+    msg_trace('=%s' % ' '.join(escape_argument(str(a)) for a in cmd))
+    result = None
+    try:
+        result = subprocess.check_output(cmd, shell=True).decode(codec)
+        if not dont_strip:
+            result = result.strip()
+    except:
+        msg_trace('FAILED!')
+        raise
+    return result
 
 def msg(*args):
     sys.stdout.write('> ')
@@ -116,6 +232,7 @@ def escape_for_cmd_exe(arg):
     return meta_re.sub(escape_meta_chars, arg)
 
 def really_rmtree(path):
+    msg_trace('really_rmtree(%r)' % path)
     WAIT_TIME_SECS = 1.0
     MAX_TRIES = 10
 
@@ -152,6 +269,29 @@ def really_rmtree(path):
 
     msg('Warning: failed to remove directory %r' % path)
 
+def copy_tree(src, dst):
+    msg_trace('copy_tree(%r, %r)' % (src, dst))
+    distutils.dir_util.copy_tree(src=src, dst=dst)
+
+@contextmanager
+def pushd(path):
+    msg_trace('pushd(%r)' % path)
+    old_path = os.getcwd()
+    os.chdir(path)
+    try:
+        yield
+    finally:
+        msg_trace('popd(%r)' % old_path)
+        os.chdir(old_path)
+
+@contextmanager
+def mkdtemp(prefix=None):
+    path = tempfile.mkdtemp(prefix=prefix)
+    msg_trace('mkdtemp(..) = %r' % path)
+    try:
+        yield path
+    finally:
+        really_rmtree(path)
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main() or 0)
