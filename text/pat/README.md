@@ -295,3 +295,15 @@ macro_rules! replace_expr {
     ($_t:tt $sub:expr) => {$sub};
 }
 ```
+
+> **<abbr title="Just for this example">JFTE</abbr>**: strictly speaking, the above formulation of `abacus!` is needlessly complex.  It can be implemented much more efficiently using repetition, provided you *do not* need to match against the counter's value in a macro:
+>
+> ```rust
+> macro_rules! abacus {
+>     (-) => {-1};
+>     (+) => {1};
+>     ($($moves:tt)*) => {
+>         0 $(+ abacus!($moves))*
+>     }
+> }
+> ```
