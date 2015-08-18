@@ -208,6 +208,8 @@ pre, code {
     word-wrap: break-word;
 }
 pre {
+    background-color: #222;
+    color: #f8f8f2;
     border-left: 2px solid #eee;
     white-space: pre-wrap;
     padding: 14px;
@@ -218,7 +220,8 @@ pre {
 }
 code {
     padding: 0 2px;
-    color: #8D1A38;
+    color: #E1D4A9;
+    font-size: 13px;
 }
 pre code {
     padding: 0;
@@ -231,7 +234,7 @@ a > code {
 }
 
 /* Code highlighting */
-pre.rust .kw { color: #8959A8; }
+/*pre.rust .kw { color: #8959A8; }
 pre.rust .kw-2, pre.rust .prelude-ty { color: #4271AE; }
 pre.rust .number, pre.rust .string { color: #718C00; }
 pre.rust .self, pre.rust .boolval, pre.rust .prelude-val,
@@ -239,7 +242,23 @@ pre.rust .attribute, pre.rust .attribute .ident { color: #C82829; }
 pre.rust .comment { color: #8E908C; }
 pre.rust .doccomment { color: #4D4D4C; }
 pre.rust .macro, pre.rust .macro-nonterminal { color: #3E999F; }
+pre.rust .lifetime { color: #B76514; }*/
+pre.rust .kw { color: #f92672; }
+pre.rust .kw-2 { color: #f92672; }
+pre.rust .prelude-ty { color: #66d9ef; }
+pre.rust .number { color: #EFD6AB; }
+pre.rust .string { color: #F8E9A5; }
+pre.rust .self { color: #f92672; }
+pre.rust .boolval { color: #EFD6AB; }
+pre.rust .prelude-val { color: #66d9ef; }
+pre.rust .attribute { color: #C7AFD1; }
+pre.rust .attribute .ident { color: #D4BBDE; }
+pre.rust .comment { color: #75715e; }
+pre.rust .doccomment { color: #75715e; }
+pre.rust .macro { color: #AC7FE7; }
+pre.rust .macro-nonterminal { color: #CFC0E2; }
 pre.rust .lifetime { color: #B76514; }
+pre.rust .op { color: #f92672; }
 
 /* The rest */
 
@@ -273,7 +292,7 @@ blockquote {
     margin: 20px 0;
     padding: 15px 20px;
     /*background-color: #f2f7f9;*/
-    background-color: #333;
+    background-color: #181818;
     border-top: .1em solid #e5eef2;
     border-bottom: .1em solid #e5eef2;
 }
