@@ -161,7 +161,7 @@ macro_rules! tuple_default {
         (
             $(
                 replace_expr!(
-                    ($tup_ty)
+                    ($tup_tys)
                     Default::default()
                 ),
             )*
