@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="rustdoc">
-    <title>Macro by Example</title>
+    <title>Macros</title>
 
     <link rel="stylesheet" type="text/css" href="rust-book.css">
 
@@ -30,15 +30,11 @@
 <ul class='chapter'>
 <li><a  href='README.html'><b>1.</b> Introduction</a>
 </li>
-<li><a class='active' href='mbe.html'><b>2.</b> Macro by Example</a>
+<li><a class='active' href='mbe.html'><b>2.</b> Macros</a>
 </li>
 <li><a  href='pat/README.html'><b>3.</b> Patterns</a>
 </li>
 <li><a  href='blk/README.html'><b>4.</b> Building Blocks</a>
-<ul class='section'>
-<li><a  href='blk/counting.html'><b>4.1.</b> Counting</a>
-</li>
-</ul>
 </li>
 </ul>
 </div>
@@ -46,8 +42,94 @@
 <div id='page'>
 
 
-    <h1 class="title">Macro by Example</h1>
+    <h1 class="title">Macros</h1>
     <p>Introduction to MBE, the rules, limitations, etc.</p>
+
+<h1 id="syntax-extensions" class='section-header'><a
+                           href="#syntax-extensions">Syntax extensions</a></h1>
+<blockquote>
+<p><strong>TODO</strong>: Talk about the various classes of syntax extension, and how they are processed.  In particular: prior to names and types are resolved.  They <em>aren&#39;t</em> items and aren&#39;t in the same namespace as anything else.  List major limitations.</p>
+</blockquote>
+
+<h2 id="token-trees" class='section-header'><a
+                           href="#token-trees">Token trees</a></h2>
+<blockquote>
+<p><strong>TODO</strong>: What is a token, what is a token tree.  Mention NTs.</p>
+</blockquote>
+
+<h2 id="invocation-syntax" class='section-header'><a
+                           href="#invocation-syntax">Invocation syntax</a></h2>
+<blockquote>
+<p><strong>TODO</strong>: The <code>ident ! $tt</code> syntax, that it might be a syntax extension (not a macro).</p>
+</blockquote>
+
+<h2 id="expansion" class='section-header'><a
+                           href="#expansion">Expansion</a></h2>
+<blockquote>
+<p><strong>TODO</strong>: Macros are expanded from the outside in.  The expansion can contain macro invocations, and will be forced into one a limited set of syntax elements.  Note the recursion limit and that it can be raised.</p>
+</blockquote>
+
+<h1 id="macro-by-example" class='section-header'><a
+                           href="#macro-by-example">Macro-by-example</a></h1>
+<blockquote>
+<p><strong>TODO</strong>: Introduce <code>macro_rules!</code> and the basic syntax.  Perhaps also a reminder that recursion is handled <em>after</em> expansion, not <em>during</em>.</p>
+</blockquote>
+
+<h2 id="processing" class='section-header'><a
+                           href="#processing">Processing</a></h2>
+<blockquote>
+<p><strong>TODO</strong>: How MR handles an invocation.  First example should be literal token matching.</p>
+</blockquote>
+
+<h2 id="captures" class='section-header'><a
+                           href="#captures">Captures</a></h2>
+<blockquote>
+<p><strong>TODO</strong>: Second example: introduce straight captures and substitutions.  Full list of capture kinds.</p>
+</blockquote>
+
+<h2 id="repetitions" class='section-header'><a
+                           href="#repetitions">Repetitions</a></h2>
+<blockquote>
+<p><strong>TODO</strong>: Third example: add repetitions with and without captures.  Note that repetitions must have a consistent &quot;depth&quot;, and can&#39;t be mixed.</p>
+</blockquote>
+
+<h1 id="details" class='section-header'><a
+                           href="#details">Details</a></h1>
+<h2 id="captures-and-expansion-redux" class='section-header'><a
+                           href="#captures-and-expansion-redux">Captures and Expansion Redux</a></h2>
+<blockquote>
+<p><strong>TODO</strong>: Captures are unabortable.</p>
+
+<p><strong>TODO</strong>: Captures restrict what can come after (TY_FOLLOW).</p>
+
+<p><strong>TODO</strong>: Substitutions create NTs (except for TTs), which <em>cannot</em> be destructured afterwards.  Good example are meta items.</p>
+</blockquote>
+
+<h2 id="hygiene" class='section-header'><a
+                           href="#hygiene">Hygiene</a></h2>
+<blockquote>
+<p><strong>TODO</strong>: Show syntax context colouring.</p>
+</blockquote>
+
+<h2 id="debugging" class='section-header'><a
+                           href="#debugging">Debugging</a></h2>
+<blockquote>
+<p><strong>TODO</strong>: <code>trace_macros!</code>, <code>log_syntax!</code>, <code>--pretty expanded</code>, <code>--pretty expanded,hygiene</code>.</p>
+</blockquote>
+
+<h2 id="scoping" class='section-header'><a
+                           href="#scoping">Scoping</a></h2>
+<blockquote>
+<p><strong>TODO</strong>: scoping in modules, impls, functions.</p>
+</blockquote>
+
+<h2 id="import/export" class='section-header'><a
+                           href="#import/export">Import/Export</a></h2>
+<blockquote>
+<p><strong>TODO</strong>: <code>macro_use</code>, <code>macro_export</code>.</p>
+
+<p><strong>TODO</strong>: <code>$crate</code>.</p>
+</blockquote>
 
     <script type="text/javascript">
         window.playgroundUrl = "http://play.rust-lang.org";
