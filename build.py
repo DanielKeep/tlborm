@@ -9,6 +9,8 @@ RUSTBOOK_OUT_PATH = '_book'
 PUBLISH_BRANCH = 'gh-pages'
 
 TEMP_PREFIX = 'tlborm-build-'
+WATCH_DELAY = 0.25 # sec
+WATCH_SLEEP = 0.5 # sec
 
 import distutils.dir_util
 import os
@@ -29,7 +31,7 @@ def main():
         args = ['build']
 
     def usage():
-        print('Usage: build.py [build | publish | help]')
+        print('Usage: build.py [build | open | publish | watch | help]')
         return 1
     
     if '--help' in args or 'help' in args or len(args) != 1:
@@ -38,8 +40,14 @@ def main():
     if args[0] == 'build':
         build()
 
+    elif args[0] == 'open':
+        do_open()
+
     elif args[0] == 'publish':
         publish()
+
+    elif args[0] == 'watch':
+        watch()
 
     else:
         return usage()
@@ -53,6 +61,11 @@ def build():
 
     copy_tree(src=RUSTBOOK_OUT_PATH, dst=BOOK_OUT_PATH)
     copy_merge(src=STATIC_PATH, dst=OUT_PATH)
+    msg('.. done.')
+
+def do_open():
+    msg('Opening...')
+    os.startfile(os.path.join(OUT_PATH, 'index.html'))
     msg('.. done.')
 
 def publish():
@@ -99,6 +112,50 @@ def publish():
             sh('git', 'push', '-qu', 'origin', PUBLISH_BRANCH)
 
     sh('git', 'push', '-q', 'origin', PUBLISH_BRANCH)
+    msg('.. done.')
+
+def watch():
+    try:
+        import watchdog
+    except ImportError:
+        msg('Cannot watch: could not import watchdog.')
+        msg('Try installing with `pip install watchdog`.')
+        return
+
+    msg('Watching for changes...')
+
+    from watchdog.events import FileSystemEventHandler
+    from watchdog.observers import Observer
+
+    class RebuildHandler(FileSystemEventHandler):
+        def __init__(self, box):
+            self.box = box
+
+        def on_any_event(self, event):
+            last_ts = self.box[0]
+            now = time.time()
+            if last_ts is None:
+                self.box[0] = now + WATCH_DELAY
+
+    rebuild_after = [None]
+    handler = RebuildHandler(rebuild_after)
+
+    observer = Observer()
+    observer.schedule(handler, TEXT_PATH, recursive=True)
+    observer.schedule(handler, STATIC_PATH, recursive=True)
+    observer.start()
+
+    try:
+        while True:
+            ts = rebuild_after[0]
+            if ts is not None and time.time() >= ts:
+                rebuild_after[0] = None
+                build()
+            time.sleep(WATCH_SLEEP)
+    except KeyboardInterrupt:
+        observer.stop()
+    observer.join()
+
     msg('.. done.')
 
 def init_pub_branch():
