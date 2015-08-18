@@ -36,6 +36,12 @@
 </li>
 <li><a  href='../blk/README.html'><b>4.</b> Building Blocks</a>
 </li>
+<li><a  href='../aeg/README.html'><b>5.</b> Annotated Examples</a>
+<ul class='section'>
+<li><a  href='../aeg/ook.html'><b>5.1.</b> Ook!</a>
+</li>
+</ul>
+</li>
 </ul>
 </div>
 <div id='page-wrapper'>
@@ -44,6 +50,24 @@
 
     <h1 class="title">Patterns</h1>
     <p>Parsing and expansion patterns.</p>
+
+<h2 id="abacus-counters" class='section-header'><a
+                           href="#abacus-counters">Abacus Counters</a></h2>
+<blockquote>
+<p><strong>TODO</strong>: Example.</p>
+</blockquote>
+
+<p>This technique can be used in cases where you need to keep track of a varying counter that starts at or near zero, and must support the following operations:</p>
+
+<ul>
+<li>Increment by one.</li>
+<li>Decrement by one.</li>
+<li>Compare to zero.</li>
+</ul>
+
+<blockquote>
+<p><strong>TODO</strong>: More explanation.</p>
+</blockquote>
 
 <h2 id="incremental-tt-munchers" class='section-header'><a
                            href="#incremental-tt-munchers">Incremental TT munchers</a></h2><span class='rusttest'>fn main() {
@@ -327,6 +351,16 @@
 <p>Placing a <code>$(,)*</code> repetition <em>after</em> the main list, however, will capture any number (including zero or one) of trailing commas, or any other separator you may be using.</p>
 
 <p>Note that this cannot be used in all contexts.  If the compiler rejects this, you will likely need to use multiple arms and/or incremental matching.</p>
+
+<h2 id="tt-bundling" class='section-header'><a
+                           href="#tt-bundling">TT Bundling</a></h2>
+<blockquote>
+<p><strong>TODO</strong>: Example.</p>
+</blockquote>
+
+<p>In particularly complex recursive macros, a large number of arguments may be needed in order to carry identifiers and expressions to successive layers.  However, depending on the implementation there may be many intermediate layers which need to forward these arguments, but do not need to <em>use</em> them.</p>
+
+<p>As such, it can be very useful to bundle all such arguments together into a single TT by placing them in a group.  This allows layers which do not need to use the arguments to simply capture and substitute a single <code>tt</code>, rather than having to exactly capture and substitute the entire argument group.</p>
 
     <script type="text/javascript">
         window.playgroundUrl = "http://play.rust-lang.org";
