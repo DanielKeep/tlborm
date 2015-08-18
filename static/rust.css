@@ -65,7 +65,7 @@ body {
     font-family: "Source Serif Pro", Georgia, Times, "Times New Roman", serif;
     font-size: 18px;
     /*color: #333;*/
-    color: #eee;
+    color: #ddd;
     line-height: 1.428571429;
 
     -webkit-font-feature-settings: "kern", "liga";
@@ -107,7 +107,8 @@ h1 {
     font-size: 28px;
     font-weight: 500;
     padding: .1em .4em;
-    border-bottom: 2px solid #ddd;
+    /*border-bottom: 2px solid #ddd;*/
+    border-bottom: 2px solid #666;
 }
 h1.title {
     line-height: 1.5em;
@@ -115,12 +116,14 @@ h1.title {
 h2 {
     font-size: 26px;
     padding: .2em .5em;
-    border-bottom: 1px solid #ddd;
+    /*border-bottom: 1px solid #ddd;*/
+    border-bottom: 1px solid #666;
 }
 h3 {
     font-size: 24px;
     padding: .2em .7em;
-    border-bottom: 1px solid #DDE8FC;
+    /*border-bottom: 1px solid #DDE8FC;*/
+    border-bottom: 1px solid #666;
 }
 h4 {
     font-size: 22px;
@@ -163,7 +166,8 @@ em {
 }
 
 footer {
-    border-top: 1px solid #ddd;
+    /*border-top: 1px solid #ddd;*/
+    border-top: 1px solid #666;
     font-size: 14.3px;
     font-style: italic;
     padding-top: 5px;
@@ -184,7 +188,7 @@ a:hover, a:focus {
 }
 a:focus {
     /*outline: thin dotted #333;*/
-    outline: thin dotted #eee;
+    outline: thin dotted #ddd;
     outline: 5px auto -webkit-focus-ring-color;
     outline-offset: -2px;
 }
@@ -210,7 +214,8 @@ pre, code {
 pre {
     background-color: #222;
     color: #f8f8f2;
-    border-left: 2px solid #eee;
+    /*border-left: 2px solid #eee;*/
+    border-left: 2px solid #666;
     white-space: pre-wrap;
     padding: 14px;
     padding-right: 0;
@@ -288,13 +293,15 @@ pre.rust .op { color: #f92672; }
 
 blockquote {
     /*color: #000;*/
-    color: #eee;
+    color: #ddd;
     margin: 20px 0;
     padding: 15px 20px;
     /*background-color: #f2f7f9;*/
     background-color: #181818;
-    border-top: .1em solid #e5eef2;
-    border-bottom: .1em solid #e5eef2;
+    /*border-top: .1em solid #e5eef2;
+    border-bottom: .1em solid #e5eef2;*/
+    border-top: .1em solid #666;
+    border-bottom: .1em solid #666;
 }
 blockquote p {
     font-size: 17px;
@@ -340,7 +347,8 @@ hr {
     margin-top: 20px;
     margin-bottom: 20px;
     border: 0;
-    border-top: 1px solid #eeeeee;
+    /*border-top: 1px solid #eeeeee;*/
+    border-top: 1px solid #666;
 }
 
 table {
@@ -356,7 +364,8 @@ table tr.odd {
 
 table td,
 table th {
-    border: 1px solid #ddd;
+    /*border: 1px solid #ddd;*/
+    border: 1px solid #666;
     padding: 5px;
 }
 
@@ -405,7 +414,8 @@ pre.rust { position: relative; }
         content: "";
     }
     pre, blockquote {
-        border: 1px solid #999;
+        /*border: 1px solid #999;*/
+        border: 1px solid #666;
         page-break-inside: avoid;
     }
     @page {
