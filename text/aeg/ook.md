@@ -363,4 +363,4 @@ This was based on a macro implementing an isomorphic language called "Hodor!".  
 
 Legend has it that after raising the recursion limit to *three million* and allowing it to run for *four days*, it finally finished.
 
-...by exceeding the recursion limit and aborting.  To this day, esolang-as-macro remains a decidedly *non-viable* method of development with Rust.
+...by overflowing the stack and aborting.  To this day, esolang-as-macro remains a decidedly *non-viable* method of development with Rust.
