@@ -4,15 +4,92 @@ Parsing and expansion patterns.
 
 ## Abacus Counters
 
-> **TODO**: Example.
+```rust
+macro_rules! abacus {
+    // This is the abacus counter.
+    (@count (- $($moves:tt)*) -> (+ $($count:tt)*)) => {
+        abacus!(@count ($($moves)*) -> ($($count)*))
+    };
+    (@count (- $($moves:tt)*) -> ($($count:tt)*)) => {
+        abacus!(@count ($($moves)*) -> (- $($count)*))
+    };
+    (@count (+ $($moves:tt)*) -> (- $($count:tt)*)) => {
+        abacus!(@count ($($moves)*) -> ($($count)*))
+    };
+    (@count (+ $($moves:tt)*) -> ($($count:tt)*)) => {
+        abacus!(@count ($($moves)*) -> (+ $($count)*))
+    };
+
+    // This extracts the counter as an integer expression.
+    (@count () -> ()) => {0};
+    (@count () -> (- $($count:tt)*)) => {
+        {(-1i32) $(- replace_expr!($count 1i32))*}
+    };
+    (@count () -> (+ $($count:tt)*)) => {
+        {(1i32) $(+ replace_expr!($count 1i32))*}
+    };
+
+    ($($moves:tt)*) => {
+        abacus!(@count ($($moves)*) -> ());
+    };
+}
+
+// See "Repetition replacement"
+macro_rules! replace_expr {
+    ($_t:tt $sub:expr) => {$sub};
+}
+
+fn main() {
+    assert_eq!(3, abacus!(+++-+++-++---++---+));
+}
+```
+
+> **Note**: this example uses [repetition replacement](#repetition-replacement), and a token [counter](../blk/README.html#counting).
 
 This technique can be used in cases where you need to keep track of a varying counter that starts at or near zero, and must support the following operations:
 
 * Increment by one.
 * Decrement by one.
-* Compare to zero.
+* Compare to zero (or any other fixed, finite value).
 
-> **TODO**: More explanation.
+A value of *n* is represented by *n* instances of a specific token stored in a group.  Modifications are done using recursion and [push-down accumulation](#push-down-accumulation).  Assuming the token used is `x`, the operations above are implemented as follows:
+
+* Increment by one: match `($($count:tt)*)`, substitute `(x $($count)*)`.
+* Decrement by one: match `(x $($count:tt)*)`, substitute `($($count)*)`.
+* Compare to zero: match `()`.
+* Compare to one: match `(x)`.
+* Compare to two: match `(x x)`.
+* *(and so on...)*
+
+In this way, operations on the counter are like flicking tokens back and forth like an abacus.[^abacus]
+
+[^abacus]:
+    This desperately thin reasoning conceals the *real* reason for this name: to avoid having *yet another* thing with "token" in the name.  Talk to your writer about avoiding [semantic satiation](https://en.wikipedia.org/wiki/Semantic_satiation) today!
+
+    In fairness, it could *also* have been called ["unary counting"](https://en.wikipedia.org/wiki/Unary_numeral_system).
+
+In cases where you want to represent negative values, *-n* can be represented as *n* instances of a *different* token.  In the example given above, *+n* is stored as *n* `+` tokens, and *-m* is stored as *m* `-` tokens.
+
+In this case, the operations become slightly more complicated; increment and decrement effectively reverse their usual meanings when the counter is negative.  To whit given `+` and `-` for the positive and negative tokens respectively, the operations change to:
+
+* Increment by one:
+  * match `()`, substitute `(+)`.
+  * match `(- $($count:tt)*)`, substitute `($($count)*)`.
+  * match `($($count:tt)+)`, substitute `(+ $($count)+)`.
+* Decrement by one:
+  * match `()`, substitute `(-)`.
+  * match `(+ $($count:tt)*)`, substitute `($($count)*)`.
+  * match `($($count:tt)+)`, substitute `(- $($count)+)`.
+* Compare to 0: match `()`.
+* Compare to +1: match `(+)`.
+* Compare to -1: match `(-)`.
+* Compare to +2: match `(++)`.
+* Compare to -2: match `(--)`.
+* *(and so on...)*
+
+Note that the example at the top combines some of the rules together (for example, it combines increment on `()` and `($($count:tt)+)` into an increment on `($($count:tt)*)`).
+
+As shown in the example, the final count can be extracted as an integer expression using a [counter](../blk/README.html#counting) macro.
 
 ## Incremental TT munchers
 
