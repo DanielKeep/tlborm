@@ -58,7 +58,7 @@ def build():
     if os.path.exists(OUT_PATH):
         really_rmtree(OUT_PATH)
 
-    copy_tree(src=RUSTBOOK_OUT_PATH, dst=BOOK_OUT_PATH)
+    copy_merge(src=RUSTBOOK_OUT_PATH, dst=BOOK_OUT_PATH)
     copy_merge(src=STATIC_PATH, dst=OUT_PATH)
     msg('.. done.')
 
@@ -98,7 +98,7 @@ def publish():
             build()
 
         msg('.. copying to %s...' % PUBLISH_BRANCH)
-        copy_tree(
+        copy_merge(
             src=os.path.join(master_tmp, OUT_PATH),
             dst=gh_pages_tmp)
 
@@ -338,10 +338,6 @@ def really_rmtree(path):
         if not failed: return
 
     msg('Warning: failed to remove directory %r' % path)
-
-def copy_tree(src, dst):
-    msg_trace('copy_tree(%r, %r)' % (src, dst))
-    shutil.copytree(src=src, dst=dst)
 
 @contextmanager
 def pushd(path):
