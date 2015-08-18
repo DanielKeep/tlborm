@@ -221,7 +221,7 @@ def copy_merge(src, dst):
 def sh(*cmd):
     msg_trace(' '.join(escape_argument(str(a)) for a in cmd))
     try:
-        subprocess.check_call(cmd, shell=True)
+        subprocess.check_call(cmd, shell=(os.name == 'nt'))
     except:
         msg_trace('FAILED!')
         raise
