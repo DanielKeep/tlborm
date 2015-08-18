@@ -12,7 +12,6 @@ TEMP_PREFIX = 'tlborm-build-'
 WATCH_DELAY = 0.25 # sec
 WATCH_SLEEP = 0.5 # sec
 
-import distutils.dir_util
 import os
 import re
 import shutil
@@ -145,12 +144,25 @@ def watch():
     observer.schedule(handler, STATIC_PATH, recursive=True)
     observer.start()
 
+    def enable_tracing():
+        global TRACE
+        if not TRACE:
+            TRACE = True
+            msg_trace('Enabled tracing due to exception.')
+
     try:
+        import traceback
         while True:
             ts = rebuild_after[0]
+
             if ts is not None and time.time() >= ts:
                 rebuild_after[0] = None
-                build()
+                try:
+                    build()
+                except:
+                    traceback.print_exc()
+                    enable_tracing()
+
             time.sleep(WATCH_SLEEP)
     except KeyboardInterrupt:
         observer.stop()
@@ -329,7 +341,7 @@ def really_rmtree(path):
 
 def copy_tree(src, dst):
     msg_trace('copy_tree(%r, %r)' % (src, dst))
-    distutils.dir_util.copy_tree(src=src, dst=dst)
+    shutil.copytree(src=src, dst=dst)
 
 @contextmanager
 def pushd(path):
