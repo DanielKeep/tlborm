@@ -4,47 +4,33 @@ Parsing and expansion patterns.
 
 ## Abacus Counters
 
+> **Note**: this section assumes understanding of [push-down accumulation](#push-down-accumulation) and [incremental TT munchers](#incremental-tt-munchers).
+
 ```rust
 macro_rules! abacus {
-    // This is the abacus counter.
-    (@count (- $($moves:tt)*) -> (+ $($count:tt)*)) => {
-        abacus!(@count ($($moves)*) -> ($($count)*))
+    ((- $($moves:tt)*) -> (+ $($count:tt)*)) => {
+        abacus!(($($moves)*) -> ($($count)*))
     };
-    (@count (- $($moves:tt)*) -> ($($count:tt)*)) => {
-        abacus!(@count ($($moves)*) -> (- $($count)*))
+    ((- $($moves:tt)*) -> ($($count:tt)*)) => {
+        abacus!(($($moves)*) -> (- $($count)*))
     };
-    (@count (+ $($moves:tt)*) -> (- $($count:tt)*)) => {
-        abacus!(@count ($($moves)*) -> ($($count)*))
+    ((+ $($moves:tt)*) -> (- $($count:tt)*)) => {
+        abacus!(($($moves)*) -> ($($count)*))
     };
-    (@count (+ $($moves:tt)*) -> ($($count:tt)*)) => {
-        abacus!(@count ($($moves)*) -> (+ $($count)*))
-    };
-
-    // This extracts the counter as an integer expression.
-    (@count () -> ()) => {0};
-    (@count () -> (- $($count:tt)*)) => {
-        {(-1i32) $(- replace_expr!($count 1i32))*}
-    };
-    (@count () -> (+ $($count:tt)*)) => {
-        {(1i32) $(+ replace_expr!($count 1i32))*}
+    ((+ $($moves:tt)*) -> ($($count:tt)*)) => {
+        abacus!(($($moves)*) -> (+ $($count)*))
     };
 
-    ($($moves:tt)*) => {
-        abacus!(@count ($($moves)*) -> ());
-    };
-}
-
-// See "Repetition replacement"
-macro_rules! replace_expr {
-    ($_t:tt $sub:expr) => {$sub};
+    // Check if the final result is zero.
+    (() -> ()) => { true };
+    (() -> ($($count:tt)+)) => { false };
 }
 
 fn main() {
-    assert_eq!(3, abacus!(+++-+++-++---++---+));
+    let equals_zero = abacus!((++-+-+++--++---++----+) -> ());
+    assert_eq!(equals_zero, true);
 }
 ```
-
-> **Note**: this example uses [repetition replacement](#repetition-replacement), and a token [counter](../blk/README.html#counting).
 
 This technique can be used in cases where you need to keep track of a varying counter that starts at or near zero, and must support the following operations:
 
@@ -89,7 +75,26 @@ In this case, the operations become slightly more complicated; increment and dec
 
 Note that the example at the top combines some of the rules together (for example, it combines increment on `()` and `($($count:tt)+)` into an increment on `($($count:tt)*)`).
 
-As shown in the example, the final count can be extracted as an integer expression using a [counter](../blk/README.html#counting) macro.
+If you want to extract the actual *value* of the counter, this can be done using a regular [counter macro](../blk/README.html#counting).  For the example above, the terminal rules can be replaced with the following:
+
+```rust
+macro_rules! abacus {
+    // ...
+
+    // This extracts the counter as an integer expression.
+    (() -> ()) => {0};
+    (() -> (- $($count:tt)*)) => {
+        {(-1i32) $(- replace_expr!($count 1i32))*}
+    };
+    (() -> (+ $($count:tt)*)) => {
+        {(1i32) $(+ replace_expr!($count 1i32))*}
+    };
+}
+
+macro_rules! replace_expr {
+    ($_t:tt $sub:expr) => {$sub};
+}
+```
 
 ## Incremental TT munchers
 
