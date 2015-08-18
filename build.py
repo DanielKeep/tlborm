@@ -98,7 +98,8 @@ def publish():
 
             sh('git', 'push', '-qu', 'origin', PUBLISH_BRANCH)
 
-    msg('.. done.  Use `git push origin %s` to make changes live.' % PUBLISH_BRANCH)
+    sh('git', 'push', '-q', 'origin', PUBLISH_BRANCH)
+    msg('.. done.')
 
 def init_pub_branch():
     msg_trace('init_pub_branch()')
