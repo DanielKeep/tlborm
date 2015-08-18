@@ -51,6 +51,97 @@
     <h1 class="title">Patterns</h1>
     <p>Parsing and expansion patterns.</p>
 
+<h2 id="callbacks" class='section-header'><a
+                           href="#callbacks">Callbacks</a></h2><span class='rusttest'>macro_rules! call_with_larch {
+    ($callback:ident) =&gt; { $callback!(larch) };
+}
+
+macro_rules! expand_to_larch {
+    () =&gt; { larch };
+}
+
+macro_rules! recognise_tree {
+    (larch) =&gt; { println!(&quot;#1, the Larch.&quot;) };
+    (redwood) =&gt; { println!(&quot;#2, the Mighty Redwood.&quot;) };
+    (fir) =&gt; { println!(&quot;#3, the Fir.&quot;) };
+    (chestnut) =&gt; { println!(&quot;#4, the Horse Chestnut.&quot;) };
+    (pine) =&gt; { println!(&quot;#5, the Scots Pine.&quot;) };
+    ($($other:tt)*) =&gt; { println!(&quot;I don&#39;t know; some kind of birch maybe?&quot;) };
+}
+
+fn main() {
+    recognise_tree!(expand_to_larch!());
+    call_with_larch!(recognise_tree);
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>call_with_larch</span> {
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>callback</span>:<span class='ident'>ident</span>) <span class='op'>=&gt;</span> { <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>callback</span><span class='op'>!</span>(<span class='ident'>larch</span>) };
+}
+
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>expand_to_larch</span> {
+    () <span class='op'>=&gt;</span> { <span class='ident'>larch</span> };
+}
+
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>recognise_tree</span> {
+    (<span class='ident'>larch</span>) <span class='op'>=&gt;</span> { <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;#1, the Larch.&quot;</span>) };
+    (<span class='ident'>redwood</span>) <span class='op'>=&gt;</span> { <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;#2, the Mighty Redwood.&quot;</span>) };
+    (<span class='ident'>fir</span>) <span class='op'>=&gt;</span> { <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;#3, the Fir.&quot;</span>) };
+    (<span class='ident'>chestnut</span>) <span class='op'>=&gt;</span> { <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;#4, the Horse Chestnut.&quot;</span>) };
+    (<span class='ident'>pine</span>) <span class='op'>=&gt;</span> { <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;#5, the Scots Pine.&quot;</span>) };
+    ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>other</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>=&gt;</span> { <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;I don&#39;t know; some kind of birch maybe?&quot;</span>) };
+}
+
+<span class='kw'>fn</span> <span class='ident'>main</span>() {
+    <span class='macro'>recognise_tree</span><span class='macro'>!</span>(<span class='macro'>expand_to_larch</span><span class='macro'>!</span>());
+    <span class='macro'>call_with_larch</span><span class='macro'>!</span>(<span class='ident'>recognise_tree</span>);
+}</pre>
+
+<p>Due to the order that macros are expanded in, it is (as of Rust 1.2) impossible to pass information to a macro from the expansion of <em>another</em> macro.  This can make modularising macros very difficult.</p>
+
+<p>An alternative is to use recursion and pass a callback.  Here is a trace of the above example to demonstrate how this takes place:</p>
+<span class='rusttest'>fn main() {
+    recognise_tree! { expand_to_larch ! (  ) }
+    println! { &quot;I don&#39;t know; some kind of birch maybe?&quot; }
+    // ...
+    
+    call_with_larch! { recognise_tree }
+    recognise_tree! { larch }
+    println! { &quot;#1, the Larch.&quot; }
+    // ...
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='macro'>recognise_tree</span><span class='macro'>!</span> { <span class='ident'>expand_to_larch</span> <span class='op'>!</span> (  ) }
+<span class='macro'>println</span><span class='macro'>!</span> { <span class='string'>&quot;I don&#39;t know; some kind of birch maybe?&quot;</span> }
+<span class='comment'>// ...</span>
+
+<span class='macro'>call_with_larch</span><span class='macro'>!</span> { <span class='ident'>recognise_tree</span> }
+<span class='macro'>recognise_tree</span><span class='macro'>!</span> { <span class='ident'>larch</span> }
+<span class='macro'>println</span><span class='macro'>!</span> { <span class='string'>&quot;#1, the Larch.&quot;</span> }
+<span class='comment'>// ...</span></pre>
+
+<p>Using a <code>tt</code> repetition, one can also forward arbitrary arguments to a callback.</p>
+<span class='rusttest'>macro_rules! callback {
+    ($callback:ident($($args:tt)*)) =&gt; {
+        $callback!($($args)*)
+    };
+}
+
+fn main() {
+    callback!(callback(println(&quot;Yes, this *was* unnecessary.&quot;)));
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>callback</span> {
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>callback</span>:<span class='ident'>ident</span>($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>args</span>:<span class='ident'>tt</span>)<span class='op'>*</span>)) <span class='op'>=&gt;</span> {
+        <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>callback</span><span class='op'>!</span>($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>args</span>)<span class='op'>*</span>)
+    };
+}
+
+<span class='kw'>fn</span> <span class='ident'>main</span>() {
+    <span class='macro'>callback</span><span class='macro'>!</span>(<span class='ident'>callback</span>(<span class='ident'>println</span>(<span class='string'>&quot;Yes, this *was* unnecessary.&quot;</span>)));
+}</pre>
+
+<p>You can, of course, insert additional tokens in the arguments as needed.</p>
+
 <h2 id="incremental-tt-munchers" class='section-header'><a
                            href="#incremental-tt-munchers">Incremental TT munchers</a></h2><span class='rusttest'>fn main() {
     macro_rules! mixed_rules {
