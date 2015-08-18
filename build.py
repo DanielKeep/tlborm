@@ -110,7 +110,7 @@ def publish():
 
             sh('git', 'push', '-qu', 'origin', PUBLISH_BRANCH)
 
-    sh('git', 'push', '-q', 'origin', PUBLISH_BRANCH)
+    sh('git', 'push', '-q', 'origin', 'master', PUBLISH_BRANCH)
     msg('.. done.')
 
 def watch():
