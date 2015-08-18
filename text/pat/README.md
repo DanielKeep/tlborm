@@ -2,6 +2,18 @@
 
 Parsing and expansion patterns.
 
+## Abacus Counters
+
+> **TODO**: Example.
+
+This technique can be used in cases where you need to keep track of a varying counter that starts at or near zero, and must support the following operations:
+
+* Increment by one.
+* Decrement by one.
+* Compare to zero.
+
+> **TODO**: More explanation.
+
 ## Incremental TT munchers
 
 ```rust
@@ -187,3 +199,11 @@ There are various places in the Rust grammar where trailing commas are permitted
 Placing a `$(,)*` repetition *after* the main list, however, will capture any number (including zero or one) of trailing commas, or any other separator you may be using.
 
 Note that this cannot be used in all contexts.  If the compiler rejects this, you will likely need to use multiple arms and/or incremental matching.
+
+## TT Bundling
+
+> **TODO**: Example.
+
+In particularly complex recursive macros, a large number of arguments may be needed in order to carry identifiers and expressions to successive layers.  However, depending on the implementation there may be many intermediate layers which need to forward these arguments, but do not need to *use* them.
+
+As such, it can be very useful to bundle all such arguments together into a single TT by placing them in a group.  This allows layers which do not need to use the arguments to simply capture and substitute a single `tt`, rather than having to exactly capture and substitute the entire argument group.
