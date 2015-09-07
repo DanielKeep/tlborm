@@ -11,6 +11,7 @@ If you wish to contribute, see [the GitHub repository](https://github.com/Daniel
 * A nicer CSS theme.
 * Parsing/expansion techniques and patterns.
 * Useful building blocks.
+* Porting "A Practical Intro to Macros in Rust 1.0" to the book (with appropriate updates for the likely future-proofing changes).
 
 ## Being worked on
 
