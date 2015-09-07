@@ -49,13 +49,57 @@
 
 
     <h1 class="title">Macros</h1>
-    <p>Introduction to MBE, the rules, limitations, etc.</p>
+    <p>This chapter will introduce Rust&#39;s Macro-By-Example system: <code>macro_rules!</code>.  Rather than trying to cover it based on practical examples, it will instead attempt to give you a complete and thorough explanation of <em>how</em> the system works.  As such, this is intended for people who just want the system as a whole explained, rather than be guided through it.</p>
 
-<h1 id="syntax-extensions" class='section-header'><a
-                           href="#syntax-extensions">Syntax extensions</a></h1>
+<p>In terms of learning resources, there is also the <a href="http://doc.rust-lang.org/book/macros.html">Macros chapter of the Rust Book</a> which is a more approachable, high-level explanation, and <a href="https://danielkeep.github.io/practical-intro-to-macros.html">A Practical Intro to Macros in Rust 1.0</a> which is a guided implementation of a single macro.</p>
+
+<h2 id="rust-source-analysis" class='section-header'><a
+                           href="#rust-source-analysis">Rust Source Analysis</a></h2>
 <blockquote>
-<p><strong>TODO</strong>: Talk about the various classes of syntax extension, and how they are processed.  In particular: prior to names and types are resolved.  They <em>aren&#39;t</em> items and aren&#39;t in the same namespace as anything else.  List major limitations.</p>
+<p><strong>TODO</strong>: How is source text lexed and then parsed?</p>
 </blockquote>
+
+<p>Before talking about <em>macros</em>, it is worthwhile discussing the general mechanism they are built on: <em>syntax extensions</em>.  To do <em>that</em>, we must discuss how Rust source is processed by the compiler.</p>
+
+<p>The first stage of compilation for a Rust program is tokenisation.  This is where the source text is transformed into a sequence of tokens (<em>i.e.</em> indivisible lexical units; the programming language equivalent of &quot;words&quot;).  Rust has various kinds of tokens, such as:</p>
+
+<ul>
+<li>Identifiers: <code>foo</code>, <code>Bambous</code>, <code>self</code>, <code>we_can_dance</code>, <code>LaCaravane</code>, …</li>
+<li>Integers: <code>42</code>, <code>72u32</code>, <code>0_______0</code>, …</li>
+<li>Keywords: <code>_</code>, <code>fn</code>, <code>self</code>, <code>match</code>, <code>yield</code>, <code>macro</code>, …</li>
+<li>Lifetimes: <code>&#39;a</code>, <code>&#39;b</code>, <code>&#39;a_rare_long_lifetime_name</code>, …</li>
+<li>Strings: <code>&quot;&quot;</code>, <code>&quot;Leicester&quot;</code>, <code>r##&quot;venezuelan beaver&quot;##</code>, …</li>
+<li>Symbols: <code>[</code>, <code>:</code>, <code>::</code>, <code>-&gt;</code>, <code>@</code>, <code>&lt;-</code>, …</li>
+</ul>
+
+<p>…among others.  There are some things to note about the above: first, <code>self</code> is both an identifier <em>and</em> a keyword.  In almost all cases, <code>self</code> is a keyword, but it <em>is</em> possible for it to <em>become</em> a keyword, which will come up later (along with much cursing).  Secondly, the list of keywords includes some suspicious entries such as <code>yield</code> and <code>macro</code> that aren&#39;t <em>actually</em> in the language, but <em>are</em> parsed by the compiler—these are reserved for future use.  Third, the list of symbols <em>also</em> includes entries that aren&#39;t used by the language.  In the case of <code>@</code> and <code>&lt;-</code>, both are vestigial: they were removed from the language, but not from the lexer.  As a final point, note that <code>::</code> is a distinct token; it is not simply two adjacent <code>:</code> tokens.  The same is true of all multi-character symbol tokens in Rust, as of Rust 1.2.</p>
+
+<p>As a point of comparison, it is at <em>this</em> stage that some languages have their macro layer, though Rust does <em>not</em>.  For example, C/C++ macros are <em>effectively</em> processed at this point.<sup id="fnref1"><a href="#fn1" rel="footnote">1</a></sup>  This is why the following code works:<sup id="fnref2"><a href="#fn2" rel="footnote">2</a></sup></p>
+
+<pre><code class="language-c">#define SUB void
+#define BEGIN {
+#define END }
+
+SUB main() BEGIN
+    printf(&quot;Oh, the horror!\n&quot;);
+END
+</code></pre>
+
+<p>The next stage is parsing, where the stream of tokens is turned into an Abstract Syntax Tree (AST).  This involves building up the syntactic structure of the program in memory.  For example, the token sequence <code>1 + 2</code> is transformed into the equivalent of:</p>
+
+<pre><code class="language-text">┌─────────┐   ┌─────────┐
+│ BinOp   │ ┌╴│ LitInt  │
+│ op: Add │ │ │ val: 1  │
+│ lhs: ◌  │╶┘ └─────────┘
+│ rhs: ◌  │╶┐ ┌─────────┐
+└─────────┘ └╴│ LitInt  │
+              │ val: 2  │
+              └─────────┘
+</code></pre>
+
+<p>The AST contains the structure of the <em>entire</em> program, though it is based on purely <em>lexical</em> information.  For example, although the compiler may know that a particular expression is referring to a variable called &quot;<code>a</code>&quot;, at this stage, it has <em>no way</em> of knowing what &quot;<code>a</code>&quot; is, or even <em>where</em> it comes from.</p>
+
+<p>It is <em>after</em> the AST has been constructed that macros are processed.  However, before we can discuss that, we have to talk about token trees.</p>
 
 <h2 id="token-trees" class='section-header'><a
                            href="#token-trees">Token trees</a></h2>
@@ -63,11 +107,178 @@
 <p><strong>TODO</strong>: What is a token, what is a token tree.  Mention NTs.</p>
 </blockquote>
 
-<h2 id="invocation-syntax" class='section-header'><a
-                           href="#invocation-syntax">Invocation syntax</a></h2>
+<p>Token trees are somewhere between tokens and the AST.  Firstly, <em>almost</em> all tokens are also token trees; more specifically, they are <em>leaves</em>.  There is one other kind of thing that can be a token tree leaf, but we will come back to that later.</p>
+
+<p>The only basic tokens that are <em>not</em> leaves are the &quot;grouping&quot; tokens: <code>(...)</code>, <code>[...]</code>, and <code>{...}</code>.  These three are the <em>interior nodes</em> of token trees, and what give them their structure.  To give a concrete example, this sequence of tokens:</p>
+<span class='rusttest'>fn main() {
+    a + b + (c + d[0]) + e
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='ident'>a</span> <span class='op'>+</span> <span class='ident'>b</span> <span class='op'>+</span> (<span class='ident'>c</span> <span class='op'>+</span> <span class='ident'>d</span>[<span class='number'>0</span>]) <span class='op'>+</span> <span class='ident'>e</span></pre>
+
+<p>would be parsed into the following token trees:</p>
+
+<pre><code class="language-text">«a» «+» «b» «+» «(   )» «+» «e»
+          ╭────────┴──────────╮
+           «c» «+» «d» «[   ]»
+                        ╭─┴─╮
+                         «0»
+</code></pre>
+
+<p>Note that this has <em>no relationship</em> to the AST the expression would produce; instead of a single root node, there are <em>nine</em> token trees at the root level.  For reference, the AST would be:</p>
+
+<pre><code class="language-text">              ┌─────────┐
+              │ BinOp   │
+              │ op: Add │
+            ┌╴│ lhs: ◌  │
+┌─────────┐ │ │ rhs: ◌  │╶┐ ┌─────────┐
+│ Var     │╶┘ └─────────┘ └╴│ BinOp   │
+│ name: a │                 │ op: Add │
+└─────────┘               ┌╴│ lhs: ◌  │
+              ┌─────────┐ │ │ rhs: ◌  │╶┐ ┌─────────┐
+              │ Var     │╶┘ └─────────┘ └╴│ BinOp   │
+              │ name: b │                 │ op: Add │
+              └─────────┘               ┌╴│ lhs: ◌  │
+                            ┌─────────┐ │ │ rhs: ◌  │╶┐ ┌─────────┐
+                            │ BinOp   │╶┘ └─────────┘ └╴│ Var     │
+                            │ op: Add │                 │ name: e │
+                          ┌╴│ lhs: ◌  │                 └─────────┘
+              ┌─────────┐ │ │ rhs: ◌  │╶┐ ┌─────────┐
+              │ Var     │╶┘ └─────────┘ └╴│ Index   │
+              │ name: c │               ┌╴│ arr: ◌  │
+              └─────────┘   ┌─────────┐ │ │ ind: ◌  │╶┐ ┌─────────┐
+                            │ Var     │╶┘ └─────────┘ └╴│ LitInt  │
+                            │ name: d │                 │ val: 0  │
+                            └─────────┘                 └─────────┘
+</code></pre>
+
+<p>It is important to understand the distinction between the AST and token trees.  When writing macros, you have to deal with <em>both</em> as distinct things.</p>
+
+<p>One other aspect of this to note: it is <em>impossible</em> to have an unpaired paren, bracket or brace; nor is it possible to have incorrectly nested groups in a token tree.</p>
+
+<h2 id="macros-in-the-ast" class='section-header'><a
+                           href="#macros-in-the-ast">Macros in the AST</a></h2>
 <blockquote>
 <p><strong>TODO</strong>: The <code>ident ! $tt</code> syntax, that it might be a syntax extension (not a macro).</p>
+
+<p><strong>TODO</strong>: Talk about the various classes of syntax extension, and how they are processed.  In particular: prior to names and types are resolved.  They <em>aren&#39;t</em> items and aren&#39;t in the same namespace as anything else.  List major limitations.</p>
 </blockquote>
+
+<p>As previously mentioned, macro processing in Rust happens <em>after</em> the construction of the AST.  As such, the syntax used to invoke a macro <em>must</em> be a proper part of the language&#39;s syntax.  In fact, there are several &quot;syntax extension&quot; forms which are part of Rust&#39;s syntax.  Specifically, the following forms (by way of examples):</p>
+
+<ul>
+<li><code># [ $arg ]</code>; <em>e.g.</em> <code>#[derive(Clone)]</code>, <code>#[no_mangle]</code>, …</li>
+<li><code># ! [ $arg ]</code>; <em>e.g.</em> <code>#![allow(dead_code)]</code>, <code>#![crate_name=&quot;blang&quot;]</code>, …</li>
+<li><code>$name ! $arg</code>; <em>e.g.</em> <code>println!(&quot;Hi!&quot;)</code>, <code>concat!(&quot;a&quot;, &quot;b&quot;)</code>, …</li>
+<li><code>$name ! $arg0 $arg1</code>; <em>e.g.</em> <code>macro_rules! dummy { () =&gt; {}; }</code>.</li>
+</ul>
+
+<p>The first two are &quot;attributes&quot;, and are shared between both language-specific constructs (such as <code>#[repr(C)]</code> which is used to request a C-compatible ABI for user-defined types) and syntax extensions (such as <code>#[derive(Clone)]</code>).  There is currently no way to define a macro that uses these forms.</p>
+
+<p>The third is the one of interest to us: it is the form available for use with macros.  It is <em>also</em> used by various syntax extensions and compiler plugins.  For example, whilst <code>format!</code> is a macro, <code>format_args!</code> (which is used to <em>implement</em> <code>format!</code>) is <em>not</em>.</p>
+
+<p>The fourth is essentially a variation which is <em>not</em> available to macros.  In fact, the only case where this form is used <em>at all</em> is with <code>macro_rules!</code> which, again we will come back to.</p>
+
+<p>Disregarding all but the third form (<code>$name ! $arg</code>), the question becomes: how does the Rust parser know what <code>$arg</code> looks like for every possible macro?  The answer is that it doesn&#39;t <em>have to</em>.  Instead, the argument of a macro invocation is a <em>single</em> token tree.  More specifically, it is a single, <em>non-leaf</em> token tree; <code>(...)</code>, <code>[...]</code>, or <code>{...}</code>.  With that knowledge, it should become apparent how the parser can understand all of the following invocation forms:</p>
+<span class='rusttest'>bitflags! {
+    flags Color: u8 {
+        const RED    = 0b0001,
+        const GREEN  = 0b0010,
+        const BLUE   = 0b0100,
+        const BRIGHT = 0b1000,
+    }
+}
+
+lazy_static! {
+    static ref FIB_100: u32 = {
+        fn fib(a: u32) -&gt; u32 {
+            match a {
+                0 =&gt; 0,
+                1 =&gt; 1,
+                a =&gt; fib(a-1) + fib(a-2)
+            }
+        }
+
+        fib(100)
+    };
+}
+
+fn main() {
+    let colors = vec![RED, GREEN, BLUE];
+    println!(&quot;Hello, World!&quot;);
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>bitflags</span><span class='macro'>!</span> {
+    <span class='ident'>flags</span> <span class='ident'>Color</span>: <span class='ident'>u8</span> {
+        <span class='kw'>const</span> <span class='ident'>RED</span>    <span class='op'>=</span> <span class='number'>0b0001</span>,
+        <span class='kw'>const</span> <span class='ident'>GREEN</span>  <span class='op'>=</span> <span class='number'>0b0010</span>,
+        <span class='kw'>const</span> <span class='ident'>BLUE</span>   <span class='op'>=</span> <span class='number'>0b0100</span>,
+        <span class='kw'>const</span> <span class='ident'>BRIGHT</span> <span class='op'>=</span> <span class='number'>0b1000</span>,
+    }
+}
+
+<span class='macro'>lazy_static</span><span class='macro'>!</span> {
+    <span class='kw'>static</span> <span class='kw-2'>ref</span> <span class='ident'>FIB_100</span>: <span class='ident'>u32</span> <span class='op'>=</span> {
+        <span class='kw'>fn</span> <span class='ident'>fib</span>(<span class='ident'>a</span>: <span class='ident'>u32</span>) <span class='op'>-&gt;</span> <span class='ident'>u32</span> {
+            <span class='kw'>match</span> <span class='ident'>a</span> {
+                <span class='number'>0</span> <span class='op'>=&gt;</span> <span class='number'>0</span>,
+                <span class='number'>1</span> <span class='op'>=&gt;</span> <span class='number'>1</span>,
+                <span class='ident'>a</span> <span class='op'>=&gt;</span> <span class='ident'>fib</span>(<span class='ident'>a</span><span class='op'>-</span><span class='number'>1</span>) <span class='op'>+</span> <span class='ident'>fib</span>(<span class='ident'>a</span><span class='op'>-</span><span class='number'>2</span>)
+            }
+        }
+
+        <span class='ident'>fib</span>(<span class='number'>100</span>)
+    };
+}
+
+<span class='kw'>fn</span> <span class='ident'>main</span>() {
+    <span class='kw'>let</span> <span class='ident'>colors</span> <span class='op'>=</span> <span class='macro'>vec</span><span class='macro'>!</span>[<span class='ident'>RED</span>, <span class='ident'>GREEN</span>, <span class='ident'>BLUE</span>];
+    <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;Hello, World!&quot;</span>);
+}</pre>
+
+<p>Although the above macro invocations may <em>look</em> like they contain various kinds of Rust code, the parser simply sees a collection of meaningless token trees.  To make this clearer, we can replace all these syntactic &quot;black boxes&quot; with ⬚, leaving us with:</p>
+
+<pre><code class="language-text">bitflags! ⬚
+
+lazy_static! ⬚
+
+fn main() {
+    let colors = vec! ⬚;
+    println! ⬚;
+}
+</code></pre>
+
+<p>Just to reiterate: the parser does not assume <em>anything</em> about ⬚; it remembers the tokens it contains, but doesn&#39;t try to <em>understand</em> them.</p>
+
+<p>The important takeaways are:</p>
+
+<ul>
+<li>There are multiple kinds of syntax extension in Rust.  We will <em>only</em> be talking about macros defined by the <code>macro_rules!</code> construct.</li>
+<li>Just because you see something of the form <code>$name! $arg</code>, doesn&#39;t mean it&#39;s actually a macro; it might be another kind of syntax extension.</li>
+<li>The input to every macro is a single non-leaf token tree.</li>
+<li>Macros are parsed as <em>part</em> of the abstract syntax tree.</li>
+</ul>
+
+<p>The last point is the most important, as it has <em>significant</em> implications.  Because macros are parsed into the AST, they can <strong>only</strong> appear in positions where they are explicitly supported.  Specifically macros can appear in place of the following:</p>
+
+<ul>
+<li>Patterns</li>
+<li>Statements</li>
+<li>Expressions</li>
+<li>Items</li>
+<li><code>impl</code> Items</li>
+</ul>
+
+<p>Some things <em>not</em> on this list:</p>
+
+<ul>
+<li>Identifiers</li>
+<li>Match arms</li>
+<li>Struct fields</li>
+<li>Types</li>
+</ul>
+
+<p>There is absolutely, definitely <em>no way</em> to use macros in any position <em>not</em> on the first list.</p>
 
 <h2 id="expansion" class='section-header'><a
                            href="#expansion">Expansion</a></h2>
@@ -75,17 +286,182 @@
 <p><strong>TODO</strong>: Macros are expanded from the outside in.  The expansion can contain macro invocations, and will be forced into one a limited set of syntax elements.  Note the recursion limit and that it can be raised.</p>
 </blockquote>
 
+<p>Expansion is a relatively simple affair.  At some point <em>after</em> the construction of the AST, but before the compiler begins constructing its semantic understanding of the program, it will expand all macros.</p>
+
+<p>This involves traversing the AST, locating macro invocations and replacing them with their expansion.  In the case of non-macro syntax extensions, <em>how</em> this happens is undefined.  That said, syntax extensions go through <em>exactly</em> the same process that macros do once their expansion is complete.</p>
+
+<p>Once the compiler has run a syntax extension, it expects an opaque object as a result.  The compiler will convert this object into one of a limited set of syntax elements, based on context.  For example, if you invoke a macro at module scope, the compiler will demand the result turn itself into an AST node that represents an item.  If you invoke a macro in expression position, the compiler will demand the result turn itself into an expression AST node.</p>
+
+<p>In fact, it can turn a syntax extension result into any of the following:</p>
+
+<ul>
+<li>an expression,</li>
+<li>a pattern,</li>
+<li>zero or more items,</li>
+<li>zero or more <code>impl</code> items, or</li>
+<li>zero or more statements.</li>
+</ul>
+
+<p>In other words, <em>where</em> you can invoke a macro determines what its result will be interpreted as.</p>
+
+<p>The compiler will take this AST node and completely replace the macro&#39;s invocation node with the output node.  <em>This is a structural operation</em>, not a textural one!</p>
+
+<p>For example, consider the following:</p>
+<span class='rusttest'>fn main() {
+    let eight = 2 * four!();
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='kw'>let</span> <span class='ident'>eight</span> <span class='op'>=</span> <span class='number'>2</span> <span class='op'>*</span> <span class='macro'>four</span><span class='macro'>!</span>();</pre>
+
+<p>We can visualise this partial AST as follows:</p>
+
+<pre><code class="language-text">┌─────────────┐
+│ Let         │
+│ name: eight │   ┌─────────┐
+│ init: ◌     │╶─╴│ BinOp   │
+└─────────────┘   │ op: Mul │
+                ┌╴│ lhs: ◌  │
+     ┌────────┐ │ │ rhs: ◌  │╶┐ ┌────────────┐
+     │ LitInt │╶┘ └─────────┘ └╴│ Macro      │
+     │ val: 2 │                 │ name: four │
+     └────────┘                 │ body: ()   │
+                                └────────────┘
+</code></pre>
+
+<p>From context, <code>four!()</code> <em>must</em> expand to an expression (the initialiser can <em>only</em> be an expression).  Thus, whatever the actual expansion is, it will be interpreted as a complete expression.  In this case, we will assume <code>four!</code> is defined such that it expands to the expression <code>1 + 3</code>.  As a result, expanding this invocation will result in the AST changing to:</p>
+
+<pre><code class="language-text">┌─────────────┐
+│ Let         │
+│ name: eight │   ┌─────────┐
+│ init: ◌     │╶─╴│ BinOp   │
+└─────────────┘   │ op: Mul │
+                ┌╴│ lhs: ◌  │
+     ┌────────┐ │ │ rhs: ◌  │╶┐ ┌─────────┐
+     │ LitInt │╶┘ └─────────┘ └╴│ BinOp   │
+     │ val: 2 │                 │ op: Add │
+     └────────┘               ┌╴│ lhs: ◌  │
+                   ┌────────┐ │ │ rhs: ◌  │╶┐ ┌────────┐
+                   │ LitInt │╶┘ └─────────┘ └╴│ LitInt │
+                   │ val: 1 │                 │ val: 3 │
+                   └────────┘                 └────────┘
+</code></pre>
+
+<p>This can be written out like so:</p>
+<span class='rusttest'>fn main() {
+    let eight = 2 * (1 + 3);
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='kw'>let</span> <span class='ident'>eight</span> <span class='op'>=</span> <span class='number'>2</span> <span class='op'>*</span> (<span class='number'>1</span> <span class='op'>+</span> <span class='number'>3</span>);</pre>
+
+<p>Note that we added parens <em>despite</em> them not being in the expansion.  Remember that the compiler always treats the expansion of a macro as a complete AST node, <strong>not</strong> as a mere sequence of tokens.  To put it another way, even if you don&#39;t explicitly wrap a complex expression in parentheses, there is no way for the compiler to &quot;misinterpret&quot; the result, or change the order of evaluation.</p>
+
+<p>It is important to understand that macro expansions are treated as AST nodes, as this design has two further implications:</p>
+
+<ul>
+<li>In addition to there being a limited number of invocation <em>positions</em>, macros can <em>only</em> expand to the kind of AST node the parser <em>expects</em> at that position.</li>
+<li>As a consequence of the above, macros <em>absolutely cannot</em> expand to incomplete or syntactically invalid constructs.</li>
+</ul>
+
+<p>There are two further things to note about expansion.  The first is what happens when a syntax extension expands to something that contains <em>another</em> syntax extension invocation.  For example, consider an alternative definition of <code>four!</code>; what happens if it expands to <code>1 + three!()</code>?</p>
+<span class='rusttest'>fn main() {
+    let x = four!();
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='kw'>let</span> <span class='ident'>x</span> <span class='op'>=</span> <span class='macro'>four</span><span class='macro'>!</span>();</pre>
+
+<p>Expands to:</p>
+<span class='rusttest'>fn main() {
+    let x = 1 + three!();
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='kw'>let</span> <span class='ident'>x</span> <span class='op'>=</span> <span class='number'>1</span> <span class='op'>+</span> <span class='macro'>three</span><span class='macro'>!</span>();</pre>
+
+<p>This is resolved by the compiler checking the result of expansions for additional macro invocations, and expanding them.  Thus, a second expansion step turns the above into:</p>
+<span class='rusttest'>fn main() {
+    let x = 1 + 3;
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='kw'>let</span> <span class='ident'>x</span> <span class='op'>=</span> <span class='number'>1</span> <span class='op'>+</span> <span class='number'>3</span>;</pre>
+
+<p>The takeaway here is that expansion happens in &quot;passes&quot;; as many as is needed to completely expand all invocations.</p>
+
+<p>Well, not <em>quite</em>.  In fact, the compiler imposes an upper limit on the number of such recursive passes it is willing to run before giving up.  This is known as the macro recursion limit and defaults to 32.  If the 32nd expansion contains a macro invocation, the compiler will abort with an error indicating that the recursion limit was exceeded.</p>
+
+<p>This limit can be raised using the <code>#![recursion_limit=&quot;…&quot;]</code> attribute, though it <em>must</em> be done crate-wide.  Generally, it is recommended to try and keep macros below this limit wherever possible.</p>
+
 <h1 id="macro-by-example" class='section-header'><a
                            href="#macro-by-example">Macro-by-example</a></h1>
 <blockquote>
 <p><strong>TODO</strong>: Introduce <code>macro_rules!</code> and the basic syntax.  Perhaps also a reminder that recursion is handled <em>after</em> expansion, not <em>during</em>.</p>
 </blockquote>
 
-<h2 id="processing" class='section-header'><a
-                           href="#processing">Processing</a></h2>
+<p>With all that in mind, we can introduce <code>macro_rules!</code> itself.  As noted previously, <code>macro_rules!</code> is <em>itself</em> a syntax extension, meaning it is <em>technically</em> not part of the Rust syntax.  It uses the following form:</p>
+<span class='rusttest'>fn main() {
+    macro_rules! $name {
+        $rule0 ;
+        $rule1 ;
+        // …
+        $ruleN ;
+    }
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>name</span> {
+    <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>rule0</span> ;
+    <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>rule1</span> ;
+    <span class='comment'>// …</span>
+    <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>ruleN</span> ;
+}</pre>
+
+<p>There must be <em>at least</em> one rule, and you can omit the semicolon after the last rule.</p>
+
+<p>Where each &quot;<code>rule</code>&quot; looks like so:</p>
+<span class='rusttest'>fn main() {
+        ($pattern) =&gt; {$expansion}
+    
+}</span><pre class='rust rust-example-rendered'>
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>pattern</span>) <span class='op'>=&gt;</span> {<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>expansion</span>}</pre>
+
+<p>Actually, the parens and braces can be any pair of matchers, but parens around the pattern and braces around the expansion are somewhat conventional.</p>
+
+<p>If you are wondering, the <code>macro_rules!</code> invocation expands to... <em>nothing</em>.  At least, nothing that appears in the AST; rather, it manipulates compiler-internal structures to register the macro.  As such, you can <em>technically</em> use <code>macro_rules!</code> in any position where an empty expansion is valid.</p>
+
+<h2 id="matching" class='section-header'><a
+                           href="#matching">Matching</a></h2>
 <blockquote>
 <p><strong>TODO</strong>: How MR handles an invocation.  First example should be literal token matching.</p>
 </blockquote>
+
+<p>When a macro is invoked, the <code>macro_rules!</code> interpreter goes through the rules one by one, in lexical order.  For each rule, it tries to match the contents of the input token tree against that rule&#39;s <code>pattern</code>.  A pattern must match the <em>entirety</em> of the input to be considered a match.</p>
+
+<p>If the input matches the pattern, the invocation is replaced by the <code>expansion</code>; otherwise, the next rule is tried.  If all rules fail to match, macro expansion fails with an error.</p>
+
+<p>The simplest example is of an empty pattern:</p>
+<span class='rusttest'>fn main() {
+    macro_rules! four {
+        () =&gt; {1 + 3};
+    }
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>four</span> {
+    () <span class='op'>=&gt;</span> {<span class='number'>1</span> <span class='op'>+</span> <span class='number'>3</span>};
+}</pre>
+
+<p>This matches if and only if the input is also empty (<em>i.e.</em> <code>four!()</code>, <code>four![]</code> or <code>four!{}</code>).</p>
+
+<p>Note that the specific grouping tokens you use when you invoke the macro <em>are not</em> matched.  That is, you can invoke the above macro as <code>four![]</code> and it will still match.  Only the <em>contents</em> of the input token tree are considered.</p>
+
+<p>Patterns can also contain literal token trees, which must be matched exactly.  This is done by simply writing the token trees normally.  For example, to match the sequence <code>4 fn [&#39;spang &quot;whammo&quot;] @_@</code>, you would use:</p>
+<span class='rusttest'>fn main() {
+    macro_rules! gibberish {
+        (4 fn [&#39;spang &quot;whammo&quot;] @_@) =&gt; {...};
+    }
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>gibberish</span> {
+    (<span class='number'>4</span> <span class='kw'>fn</span> [<span class='lifetime'>&#39;spang</span> <span class='string'>&quot;whammo&quot;</span>] <span class='kw-2'>@</span>_<span class='kw-2'>@</span>) <span class='op'>=&gt;</span> {...};
+}</pre>
+
+<p>You can use any token tree that you can write.</p>
 
 <h2 id="captures" class='section-header'><a
                            href="#captures">Captures</a></h2>
@@ -93,11 +469,134 @@
 <p><strong>TODO</strong>: Second example: introduce straight captures and substitutions.  Full list of capture kinds.</p>
 </blockquote>
 
+<p>Patterns can also contain captures.  These allow input to be matched based on some general grammar category, with the result captured to a variable which can then be substituted into the output.</p>
+
+<p>Captures are written as a dollar (<code>$</code>) followed by an identifier, a colon (<code>:</code>), and finally the kind of capture, which must be one of the following:</p>
+
+<ul>
+<li><code>item</code>: an item, like a function, struct, module, etc.</li>
+<li><code>block</code>: a block (i.e. a block of statments and/or an expression, surrounded by braces)</li>
+<li><code>stmt</code>: a statement</li>
+<li><code>pat</code>: a pattern</li>
+<li><code>expr</code>: an expression</li>
+<li><code>ty</code>: a type</li>
+<li><code>ident</code>: an identifier</li>
+<li><code>path</code>: a path (e.g. <code>foo</code>, <code>::std::mem::replace</code>, <code>transmute::&lt;_, int&gt;</code>, …)</li>
+<li><code>meta</code>: a meta item; the things that go inside <code>#[...]</code> and <code>#![...]</code> attributes</li>
+<li><code>tt</code>: a single token tree</li>
+</ul>
+
+<blockquote>
+<p><strong>TODO</strong>: Does <code>ident</code> prevent matching against literal idents?  Prove it.</p>
+</blockquote>
+
+<p>For example, here is a macro which captures its input as an expression:</p>
+<span class='rusttest'>fn main() {
+    macro_rules! one_expression {
+        ($e:expr) =&gt; {...};
+    }
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>one_expression</span> {
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> {...};
+}</pre>
+
+<p>These captures leverage the Rust compiler&#39;s parser, ensuring that they are always &quot;correct&quot;.  An <code>expr</code> capture will <em>always</em> capture a complete, valid expression for the version of Rust being compiled.</p>
+
+<p>You can mix literal token trees and captures, within limits (explained below).</p>
+
+<p>A capture <code>$name:kind</code> can be substituted into the expansion by writing <code>$name</code>.  For example:</p>
+<span class='rusttest'>fn main() {
+    macro_rules! times_five {
+        ($e:expr) =&gt; {5 * $e};
+    }
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>times_five</span> {
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> {<span class='number'>5</span> <span class='op'>*</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>};
+}</pre>
+
+<p>Much like macro expansion, captures are substituted as complete AST nodes.  This means that no matter what sequence of tokens is captured by <code>$e</code>, it will be interpreted as a single, complete expression.</p>
+
 <h2 id="repetitions" class='section-header'><a
                            href="#repetitions">Repetitions</a></h2>
 <blockquote>
 <p><strong>TODO</strong>: Third example: add repetitions with and without captures.  Note that repetitions must have a consistent &quot;depth&quot;, and can&#39;t be mixed.</p>
 </blockquote>
+
+<p>Finally, patterns can contain repetitions.  These allow a sequence of tokens to be matched.  These have the general form <code>$ ( ... ) sep rep</code>.</p>
+
+<ul>
+<li><code>$</code> is a literal dollar token.</li>
+<li><code>( ... )</code> is the paren-grouped pattern being repeated.</li>
+<li><code>sep</code> is an <em>optional</em> separator token.  Common examples are <code>,</code>, and <code>;</code>.</li>
+<li><code>rep</code> is the <em>required</em> repeat control.  Currently, this can be <em>either</em> <code>*</code> (indicating zero or more repeats) or <code>+</code> (indicating one or more repeats).  You cannot write &quot;zero or one&quot; or any other more specific counts or ranges.</li>
+</ul>
+
+<p>Repetitions can contain any other valid pattern, including literal token trees, captures, and other repetitions.</p>
+
+<p>Repetitions use the same syntax in the expansion.</p>
+
+<p>For example, below is a modified <code>vec!</code> macro which formats each element as a string.  It matches zero or more comma-separated expressions and expands to an expression that constructs a vector.</p>
+<span class='rusttest'>fn main() {
+    macro_rules! vec {
+        (
+            // Start a repetition:
+            $(
+                // Each repeat must contain an expression...
+                $element:expr
+            )
+            // ...separated by commas...
+            ,
+            // ...zero or more times.
+            *
+        ) =&gt; {
+            // Enclose the expansion in a block so that we can use
+            // multiple statements.
+            {
+                let mut v = Vec::new();
+    
+                // Start a repetition:
+                $(
+                    // Each repeat will contain the following statement, with
+                    // $element replaced with the corresponding expression.
+                    v.push(format!(&quot;{}&quot;, $element));
+                )*
+    
+                v
+            }
+        };
+    }
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>vec</span> {
+    (
+        <span class='comment'>// Start a repetition:</span>
+        $(
+            <span class='comment'>// Each repeat must contain an expression...</span>
+            <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>element</span>:<span class='ident'>expr</span>
+        )
+        <span class='comment'>// ...separated by commas...</span>
+        ,
+        <span class='comment'>// ...zero or more times.</span>
+        <span class='op'>*</span>
+    ) <span class='op'>=&gt;</span> {
+        <span class='comment'>// Enclose the expansion in a block so that we can use</span>
+        <span class='comment'>// multiple statements.</span>
+        {
+            <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>v</span> <span class='op'>=</span> <span class='ident'>Vec</span>::<span class='ident'>new</span>();
+
+            <span class='comment'>// Start a repetition:</span>
+            $(
+                <span class='comment'>// Each repeat will contain the following statement, with</span>
+                <span class='comment'>// $element replaced with the corresponding expression.</span>
+                <span class='ident'>v</span>.<span class='ident'>push</span>(<span class='macro'>format</span><span class='macro'>!</span>(<span class='string'>&quot;{}&quot;</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>element</span>));
+            )<span class='op'>*</span>
+
+            <span class='ident'>v</span>
+        }
+    };
+}</pre>
 
 <h1 id="details" class='section-header'><a
                            href="#details">Details</a></h1>
@@ -105,9 +604,49 @@
                            href="#captures-and-expansion-redux">Captures and Expansion Redux</a></h2>
 <blockquote>
 <p><strong>TODO</strong>: Captures are unabortable.</p>
+</blockquote>
 
+<p>Once the parser begins consuming tokens for a capture, <em>it cannot stop or backtrack</em>.  This means that the second rule of the following macro <em>cannot ever match</em>, no matter what input is provided:</p>
+<span class='rusttest'>fn main() {
+    macro_rules! dead_rule {
+        ($e:expr) =&gt; { ... };
+        ($i:ident +) =&gt; { ... };
+    }
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>dead_rule</span> {
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> { ... };
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>:<span class='ident'>ident</span> <span class='op'>+</span>) <span class='op'>=&gt;</span> { ... };
+}</pre>
+
+<p>Consider what happens if this macro is invoked as <code>dead_rule!(x+)</code>.  The interpreter will start at the first rule, and attempt to parse the input as an expression.  The first token (<code>x</code>) is valid as an expression.  The second token is <em>also</em> valid in an expression, forming a binary addition node.</p>
+
+<p>At this point, given that there is no left-hand side of the addition, you might expect the parser to give up and try the next rule.  Instead, the parser will panic and abort the entire compilation, citing a syntax error.</p>
+
+<p>As such, it is important in general that you write macro rules from most-specific to least-specific.</p>
+
+<blockquote>
 <p><strong>TODO</strong>: Captures restrict what can come after (TY_FOLLOW).</p>
+</blockquote>
 
+<p>To defend against future syntax changes altering the interpretation of macro input, <code>macro_rules!</code> restricts what can follow various captures.  The complete list, as of Rust 1.2 is as follows:</p>
+
+<ul>
+<li><code>item</code>: anything.</li>
+<li><code>block</code>: anything.</li>
+<li><code>stmt</code>: <code>=&gt;</code>, <code>,</code>, <code>;</code>.</li>
+<li><code>pat</code>: <code>=&gt;</code>, <code>,</code>, <code>=</code>, <code>if</code>, <code>in</code>.</li>
+<li><code>expr</code>: <code>=&gt;</code>, <code>,</code>, <code>;</code>.</li>
+<li><code>ty</code>: <code>,</code>, <code>=&gt;</code>, <code>:</code>, <code>=</code>, <code>&gt;</code>, <code>;</code>, <code>as</code>.</li>
+<li><code>ident</code>: anything.</li>
+<li><code>path</code>: <code>,</code>, <code>=&gt;</code>, <code>:</code>, <code>=</code>, <code>&gt;</code>, <code>;</code>, <code>as</code>.</li>
+<li><code>meta</code>: anything.</li>
+<li><code>tt</code>: anything.</li>
+</ul>
+
+<p>Additionally, <code>macro_rules!</code> generally forbids a repetition to be followed by another repetition, even if they contents do not conflict.</p>
+
+<blockquote>
 <p><strong>TODO</strong>: Substitutions create NTs (except for TTs), which <em>cannot</em> be destructured afterwards.  Good example are meta items.</p>
 </blockquote>
 
@@ -136,6 +675,21 @@
 
 <p><strong>TODO</strong>: <code>$crate</code>.</p>
 </blockquote>
+
+<div class="footnotes">
+<hr>
+<ol>
+
+<li id="fn1">
+<p>In fact, the C preprocessor uses a different lexical structure to C itself, but the distinction is <em>broadly</em> irrelevant.&nbsp;<a href="#fnref1" rev="footnote">&#8617;</a></p>
+</li>
+
+<li id="fn2">
+<p><em>Whether</em> it should work is an entirely <em>different</em> question.&nbsp;<a href="#fnref2" rev="footnote">&#8617;</a></p>
+</li>
+
+</ol>
+</div>
 
     <script type="text/javascript">
         window.playgroundUrl = "http://play.rust-lang.org";
