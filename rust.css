@@ -265,6 +265,11 @@ pre.rust .macro-nonterminal { color: #CFC0E2; }
 pre.rust .lifetime { color: #B76514; }
 pre.rust .op { color: #f92672; }
 
+pre.rust .synctx-0 { background-color: rgba(255, 0, 0, 0.1); }
+pre.rust .synctx-1 { background-color: rgba(0, 255, 0, 0.1); }
+code .synctx-0 { background-color: rgba(255, 0, 0, 0.1); }
+code .synctx-1 { background-color: rgba(0, 255, 0, 0.1); }
+
 /* The rest */
 
 #versioninfo {

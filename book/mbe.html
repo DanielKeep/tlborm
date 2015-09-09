@@ -421,7 +421,7 @@ fn main() {
 }</span><pre class='rust rust-example-rendered'>
     (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>pattern</span>) <span class='op'>=&gt;</span> {<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>expansion</span>}</pre>
 
-<p>Actually, the parens and braces can be any pair of matchers, but parens around the pattern and braces around the expansion are somewhat conventional.</p>
+<p>Actually, the parens and braces can be any kind of group, but parens around the pattern and braces around the expansion are somewhat conventional.</p>
 
 <p>If you are wondering, the <code>macro_rules!</code> invocation expands to... <em>nothing</em>.  At least, nothing that appears in the AST; rather, it manipulates compiler-internal structures to register the macro.  As such, you can <em>technically</em> use <code>macro_rules!</code> in any position where an empty expansion is valid.</p>
 
@@ -629,7 +629,7 @@ fn main() {
 <p><strong>TODO</strong>: Captures restrict what can come after (TY_FOLLOW).</p>
 </blockquote>
 
-<p>To defend against future syntax changes altering the interpretation of macro input, <code>macro_rules!</code> restricts what can follow various captures.  The complete list, as of Rust 1.2 is as follows:</p>
+<p>To defend against future syntax changes altering the interpretation of macro input, <code>macro_rules!</code> restricts what can follow various captures.  The complete list, as of Rust 1.3 is as follows:</p>
 
 <ul>
 <li><code>item</code>: anything.</li>
@@ -644,17 +644,198 @@ fn main() {
 <li><code>tt</code>: anything.</li>
 </ul>
 
-<p>Additionally, <code>macro_rules!</code> generally forbids a repetition to be followed by another repetition, even if they contents do not conflict.</p>
+<p>Additionally, <code>macro_rules!</code> generally forbids a repetition to be followed by another repetition, even if the contents do not conflict.</p>
 
 <blockquote>
 <p><strong>TODO</strong>: Substitutions create NTs (except for TTs), which <em>cannot</em> be destructured afterwards.  Good example are meta items.</p>
 </blockquote>
+
+<p>One aspect of substitution that often surprises people is that substitution is <em>not</em> token-based, despite very much <em>looking</em> like it.  Here is a simple demonstration:</p>
+<span class='rusttest'>macro_rules! capture_expr_then_stringify {
+    ($e:expr) =&gt; {
+        stringify!($e)
+    };
+}
+
+fn main() {
+    println!(&quot;{:?}&quot;, stringify!(dummy(2 * (1 + (3)))));
+    println!(&quot;{:?}&quot;, capture_expr_then_stringify!(dummy(2 * (1 + (3)))));
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>capture_expr_then_stringify</span> {
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> {
+        <span class='macro'>stringify</span><span class='macro'>!</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>)
+    };
+}
+
+<span class='kw'>fn</span> <span class='ident'>main</span>() {
+    <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;{:?}&quot;</span>, <span class='macro'>stringify</span><span class='macro'>!</span>(<span class='ident'>dummy</span>(<span class='number'>2</span> <span class='op'>*</span> (<span class='number'>1</span> <span class='op'>+</span> (<span class='number'>3</span>)))));
+    <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;{:?}&quot;</span>, <span class='macro'>capture_expr_then_stringify</span><span class='macro'>!</span>(<span class='ident'>dummy</span>(<span class='number'>2</span> <span class='op'>*</span> (<span class='number'>1</span> <span class='op'>+</span> (<span class='number'>3</span>)))));
+}</pre>
+
+<p>The output when run is:</p>
+
+<pre><code class="language-text">&quot;dummy ( 2 * ( 1 + ( 3 ) ) )&quot;
+&quot;dummy(2 * (1 + (3)))&quot;
+</code></pre>
+
+<p>Note that <em>despite</em> having the same input, the output is different.  This is because the first invocation is stringifying a sequence of token trees, whereas the second is stringifying <em>an AST expression node</em>.</p>
+
+<p>To visualise the difference another way, here is what the <code>stringify!</code> macro gets invoked with in the first case:</p>
+
+<pre><code class="language-text">«dummy» «(   )»
+   ╭───────┴───────╮
+    «2» «*» «(   )»
+       ╭───────┴───────╮
+        «1» «+» «(   )»
+                 ╭─┴─╮
+                  «3»
+</code></pre>
+
+<p>…and here is what it gets invoked with in the second case:</p>
+
+<pre><code class="language-text">« »
+ │ ┌─────────────┐
+ └╴│ Call        │
+   │ fn: dummy   │   ┌─────────┐
+   │ args: ◌     │╶─╴│ BinOp   │
+   └─────────────┘   │ op: Mul │
+                   ┌╴│ lhs: ◌  │
+        ┌────────┐ │ │ rhs: ◌  │╶┐ ┌─────────┐
+        │ LitInt │╶┘ └─────────┘ └╴│ BinOp   │
+        │ val: 2 │                 │ op: Add │
+        └────────┘               ┌╴│ lhs: ◌  │
+                      ┌────────┐ │ │ rhs: ◌  │╶┐ ┌────────┐
+                      │ LitInt │╶┘ └─────────┘ └╴│ LitInt │
+                      │ val: 1 │                 │ val: 3 │
+                      └────────┘                 └────────┘
+</code></pre>
+
+<p>As you can see, there is exactly <em>one</em> token tree, which contains the AST which was parsed from the input to the <code>capture_expr_then_stringify!</code> invocation.  Hence, what you see in the output is not the stringified tokens, it&#39;s the stringified <em>AST node</em>.</p>
+
+<p>This has further implications.  Consider the following:</p>
+<span class='rusttest'>macro_rules! capture_then_match_tokens {
+    ($e:expr) =&gt; {match_tokens!($e)};
+}
+
+macro_rules! match_tokens {
+    ($a:tt + $b:tt) =&gt; {&quot;got an addition&quot;};
+    (($i:ident)) =&gt; {&quot;got an identifier&quot;};
+    ($($other:tt)*) =&gt; {&quot;got something else&quot;};
+}
+
+fn main() {
+    println!(&quot;{}\n{}\n{}\n&quot;,
+        match_tokens!((caravan)),
+        match_tokens!(3 + 6),
+        match_tokens!(5));
+    println!(&quot;{}\n{}\n{}&quot;,
+        capture_then_match_tokens!((caravan)),
+        capture_then_match_tokens!(3 + 6),
+        capture_then_match_tokens!(5));
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>capture_then_match_tokens</span> {
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> {<span class='macro'>match_tokens</span><span class='macro'>!</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>)};
+}
+
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>match_tokens</span> {
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>a</span>:<span class='ident'>tt</span> <span class='op'>+</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>b</span>:<span class='ident'>tt</span>) <span class='op'>=&gt;</span> {<span class='string'>&quot;got an addition&quot;</span>};
+    ((<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>:<span class='ident'>ident</span>)) <span class='op'>=&gt;</span> {<span class='string'>&quot;got an identifier&quot;</span>};
+    ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>other</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>=&gt;</span> {<span class='string'>&quot;got something else&quot;</span>};
+}
+
+<span class='kw'>fn</span> <span class='ident'>main</span>() {
+    <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;{}\n{}\n{}\n&quot;</span>,
+        <span class='macro'>match_tokens</span><span class='macro'>!</span>((<span class='ident'>caravan</span>)),
+        <span class='macro'>match_tokens</span><span class='macro'>!</span>(<span class='number'>3</span> <span class='op'>+</span> <span class='number'>6</span>),
+        <span class='macro'>match_tokens</span><span class='macro'>!</span>(<span class='number'>5</span>));
+    <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;{}\n{}\n{}&quot;</span>,
+        <span class='macro'>capture_then_match_tokens</span><span class='macro'>!</span>((<span class='ident'>caravan</span>)),
+        <span class='macro'>capture_then_match_tokens</span><span class='macro'>!</span>(<span class='number'>3</span> <span class='op'>+</span> <span class='number'>6</span>),
+        <span class='macro'>capture_then_match_tokens</span><span class='macro'>!</span>(<span class='number'>5</span>));
+}</pre>
+
+<p>The output is:</p>
+
+<pre><code class="language-text">got an identifier
+got an addition
+got something else
+
+got something else
+got something else
+got something else
+</code></pre>
+
+<p>By parsing the input into an AST node, the substituted result becomes <em>un-destructible</em>; <em>i.e.</em> you cannot examine the contents or match against it ever again.</p>
+
+<blockquote>
+<p><strong>TODO</strong>: Verify this is true <em>re.</em> <code>ident</code>.</p>
+</blockquote>
+
+<p>The only way to avoid this is to capture using the <code>tt</code> or <code>ident</code> kinds.  Once you capture with anything else, the only thing you can do with the result from then on is substitute it directly into the output.</p>
 
 <h2 id="hygiene" class='section-header'><a
                            href="#hygiene">Hygiene</a></h2>
 <blockquote>
 <p><strong>TODO</strong>: Show syntax context colouring.</p>
 </blockquote>
+
+<p>Macros in Rust are <em>partially</em> hygienic.  Specifically, they are hygienic when it comes to most identifiers, but <em>not</em> when it comes to generic type parameters or lifetimes.</p>
+
+<p>Hygiene works by attaching an invisible &quot;syntax context&quot; value to all identifiers.  When two identifiers are compared, <em>both</em> the identifiers&#39; textural names <em>and</em> syntax contexts must be identical for the two to be considered equal.</p>
+
+<p>To illustrate this, consider the following code:</p>
+
+<pre class="rust rust-example-rendered"><span class="synctx-0"><span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">using_a</span> {
+    (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">e</span>:<span class="ident">expr</span>) <span class="op">=&gt;</span> {
+        {
+            <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="number">42</span>;
+            <span class="macro-nonterminal">$</span><span class="macro-nonterminal">e</span>
+        }
+    }
+}
+
+<span class="kw">let</span> <span class="ident">four</span> <span class="op">=</span> <span class="macro">using_a</span><span class="macro">!</span>(<span class="ident">a</span> <span class="op">/</span> <span class="number">10</span>);</span></pre>
+
+<p>We will use the background colour to denote the syntax context.  Now, let&#39;s expand the macro invocation:</p>
+
+<pre class="rust rust-example-rendered"><span class="synctx-0"><span class="kw">let</span> <span class="ident">four</span> <span class="op">=</span> </span><span class="synctx-1">{
+    <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="number">42</span>;
+    </span><span class="synctx-0"><span class="ident">a</span> <span class="op">/</span> <span class="number">10</span></span><span class="synctx-1">
+}</span><span class="synctx-0">;</span></pre>
+
+<p>First, recall that <code>macro_rules!</code> invocations effectively <em>disappear</em> during expansion.</p>
+
+<p>Second, if you attempt to compile this code, the compiler will respond with something along the following lines:</p>
+
+<pre><code class="language-text">&lt;anon&gt;:11:21: 11:22 error: unresolved name `a`
+&lt;anon&gt;:11 let four = using_a!(a / 10);
+</code></pre>
+
+<p>Note that the background colour (<em>i.e.</em> syntax context) for the expanded macro <em>changes</em> as part of expansion.  Each macro expansion is given a new, unique syntax context for its contents.  As a result, there are <em>two different <code>a</code>s</em> in the expanded code: one in the first syntax context, the second in the other.  In other words, <code><span class="synctx-0">a</span></code> is not the same identifier as <code><span class="synctx-1">a</span></code>, however similar they may appear.</p>
+
+<p>That said, tokens that were substituted <em>into</em> the expanded output <em>retain</em> their original syntax context (by virtue of having been provided to the macro as opposed to being part of the macro itself).  Thus, the solution is to modify the macro as follows:</p>
+
+<pre class="rust rust-example-rendered"><span class="synctx-0"><span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">using_a</span> {
+    (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">a</span>:<span class="ident">ident</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">e</span>:<span class="ident">expr</span>) <span class="op">=&gt;</span> {
+        {
+            <span class="kw">let</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">a</span> <span class="op">=</span> <span class="number">42</span>;
+            <span class="macro-nonterminal">$</span><span class="macro-nonterminal">e</span>
+        }
+    }
+}
+
+<span class="kw">let</span> <span class="ident">four</span> <span class="op">=</span> <span class="macro">using_a</span><span class="macro">!</span>(<span class="ident">a</span>, <span class="ident">a</span> <span class="op">/</span> <span class="number">10</span>);</span></pre>
+
+<p>Which, upon expansion becomes:</p>
+
+<pre class="rust rust-example-rendered"><span class="synctx-0"><span class="kw">let</span> <span class="ident">four</span> <span class="op">=</span> </span><span class="synctx-1">{
+    <span class="kw">let</span> </span><span class="synctx-0"><span class="ident">a</span></span><span class="synctx-1"> <span class="op">=</span> <span class="number">42</span>;
+    </span><span class="synctx-0"><span class="ident">a</span> <span class="op">/</span> <span class="number">10</span></span><span class="synctx-1">
+}</span><span class="synctx-0">;</span></pre>
+
+<p>The compiler will accept this code because there is only one <code>a</code> being used.</p>
 
 <h2 id="debugging" class='section-header'><a
                            href="#debugging">Debugging</a></h2>
