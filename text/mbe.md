@@ -486,6 +486,107 @@ Additionally, `macro_rules!` generally forbids a repetition to be followed by an
 
 > **TODO**: Substitutions create NTs (except for TTs), which *cannot* be destructured afterwards.  Good example are meta items.
 
+One aspect of substitution that often surprises people is that substitution is *not* token-based, despite very much *looking* like it.  Here is a simple demonstration:
+
+```rust
+macro_rules! capture_expr_then_stringify {
+    ($e:expr) => {
+        stringify!($e)
+    };
+}
+
+fn main() {
+    println!("{:?}", stringify!(dummy(2 * (1 + (3)))));
+    println!("{:?}", capture_expr_then_stringify!(dummy(2 * (1 + (3)))));
+}
+```
+
+The output when run is:
+
+```text
+"dummy ( 2 * ( 1 + ( 3 ) ) )"
+"dummy(2 * (1 + (3)))"
+```
+
+Note that *despite* having the same input, the output is different.  This is because the first invocation is stringifying a sequence of token trees, whereas the second is stringifying *an AST expression node*.
+
+To visualise the difference another way, here is what the `stringify!` macro gets invoked with in the first case:
+
+```text
+«dummy» «(   )»
+   ╭───────┴───────╮
+    «2» «*» «(   )»
+       ╭───────┴───────╮
+        «1» «+» «(   )»
+                 ╭─┴─╮
+                  «3»
+```
+
+…and here is what it gets invoked with in the second case:
+
+```text
+« »
+ │ ┌─────────────┐
+ └╴│ Call        │
+   │ fn: dummy   │   ┌─────────┐
+   │ args: ◌     │╶─╴│ BinOp   │
+   └─────────────┘   │ op: Mul │
+                   ┌╴│ lhs: ◌  │
+        ┌────────┐ │ │ rhs: ◌  │╶┐ ┌─────────┐
+        │ LitInt │╶┘ └─────────┘ └╴│ BinOp   │
+        │ val: 2 │                 │ op: Add │
+        └────────┘               ┌╴│ lhs: ◌  │
+                      ┌────────┐ │ │ rhs: ◌  │╶┐ ┌────────┐
+                      │ LitInt │╶┘ └─────────┘ └╴│ LitInt │
+                      │ val: 1 │                 │ val: 3 │
+                      └────────┘                 └────────┘
+```
+
+As you can see, there is exactly *one* token tree, which contains the AST which was parsed from the input to the `capture_expr_then_stringify!` invocation.  Hence, what you see in the output is not the stringified tokens, it's the stringified *AST node*.
+
+This has further implications.  Consider the following:
+
+```rust
+macro_rules! capture_then_match_tokens {
+    ($e:expr) => {match_tokens!($e)};
+}
+
+macro_rules! match_tokens {
+    ($a:tt + $b:tt) => {"got an addition"};
+    (($i:ident)) => {"got an identifier"};
+    ($($other:tt)*) => {"got something else"};
+}
+
+fn main() {
+    println!("{}\n{}\n{}\n",
+        match_tokens!((caravan)),
+        match_tokens!(3 + 6),
+        match_tokens!(5));
+    println!("{}\n{}\n{}",
+        capture_then_match_tokens!((caravan)),
+        capture_then_match_tokens!(3 + 6),
+        capture_then_match_tokens!(5));
+}
+```
+
+The output is:
+
+```text
+got an identifier
+got an addition
+got something else
+
+got something else
+got something else
+got something else
+```
+
+By parsing the input into an AST node, the substituted result becomes *un-destructible*; *i.e.* you cannot examine the contents or match against it ever again.
+
+> **TODO**: Verify this is true *re.* `ident`.
+
+The only way to avoid this is to capture using the `tt` or `ident` kinds.  Once you capture with anything else, the only thing you can do with the result from then on is substitute it directly into the output.
+
 ## Hygiene
 
 > **TODO**: Show syntax context colouring.
