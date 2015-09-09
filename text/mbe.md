@@ -321,7 +321,7 @@ Where each "`rule`" looks like so:
     ($pattern) => {$expansion}
 ```
 
-Actually, the parens and braces can be any pair of matchers, but parens around the pattern and braces around the expansion are somewhat conventional.
+Actually, the parens and braces can be any kind of group, but parens around the pattern and braces around the expansion are somewhat conventional.
 
 If you are wondering, the `macro_rules!` invocation expands to... *nothing*.  At least, nothing that appears in the AST; rather, it manipulates compiler-internal structures to register the macro.  As such, you can *technically* use `macro_rules!` in any position where an empty expansion is valid.
 
@@ -469,7 +469,7 @@ As such, it is important in general that you write macro rules from most-specifi
 
 > **TODO**: Captures restrict what can come after (TY_FOLLOW).
 
-To defend against future syntax changes altering the interpretation of macro input, `macro_rules!` restricts what can follow various captures.  The complete list, as of Rust 1.2 is as follows:
+To defend against future syntax changes altering the interpretation of macro input, `macro_rules!` restricts what can follow various captures.  The complete list, as of Rust 1.3 is as follows:
 
 * `item`: anything.
 * `block`: anything.
@@ -482,7 +482,7 @@ To defend against future syntax changes altering the interpretation of macro inp
 * `meta`: anything.
 * `tt`: anything.
 
-Additionally, `macro_rules!` generally forbids a repetition to be followed by another repetition, even if they contents do not conflict.
+Additionally, `macro_rules!` generally forbids a repetition to be followed by another repetition, even if the contents do not conflict.
 
 > **TODO**: Substitutions create NTs (except for TTs), which *cannot* be destructured afterwards.  Good example are meta items.
 
