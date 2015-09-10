@@ -413,10 +413,10 @@ Repetitions can contain any other valid pattern, including literal token trees, 
 
 Repetitions use the same syntax in the expansion.
 
-For example, below is a modified `vec!` macro which formats each element as a string.  It matches zero or more comma-separated expressions and expands to an expression that constructs a vector.
+For example, below is a macro which formats each element as a string.  It matches zero or more comma-separated expressions and expands to an expression that constructs a vector.
 
 ```rust
-macro_rules! vec {
+macro_rules! vec_strs {
     (
         // Start a repetition:
         $(
@@ -444,6 +444,11 @@ macro_rules! vec {
         }
     };
 }
+# 
+# fn main() {
+#     let s = vec_strs![1, "a", true, 3.14159f32];
+#     assert_eq!(&*s, &["1", "a", "true", "3.14159"]);
+# }
 ```
 
 # Details
