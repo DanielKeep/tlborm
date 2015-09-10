@@ -143,25 +143,36 @@ fn main() {
 <p>You can, of course, insert additional tokens in the arguments as needed.</p>
 
 <h2 id="incremental-tt-munchers" class='section-header'><a
-                           href="#incremental-tt-munchers">Incremental TT munchers</a></h2><span class='rusttest'>fn main() {
-    macro_rules! mixed_rules {
-        () =&gt; {};
-        (trace $name:ident; $($tail:tt)*) =&gt; {
-            {
-                println!(concat!(stringify!($name), &quot; = {:?}&quot;), $name);
-                mixed_rules!($($tail)*);
-            }
-        };
-        (trace $name:ident = $init:expr; $($tail:tt)*) =&gt; {
-            {
-                let $name = $init;
-                println!(concat!(stringify!($name), &quot; = {:?}&quot;), $name);
-                mixed_rules!($($tail)*);
-            }
-        };
-    }
-    
-}</span><pre class='rust rust-example-rendered'>
+                           href="#incremental-tt-munchers">Incremental TT munchers</a></h2><span class='rusttest'>macro_rules! mixed_rules {
+    () =&gt; {};
+    (trace $name:ident; $($tail:tt)*) =&gt; {
+        {
+            println!(concat!(stringify!($name), &quot; = {:?}&quot;), $name);
+            mixed_rules!($($tail)*);
+        }
+    };
+    (trace $name:ident = $init:expr; $($tail:tt)*) =&gt; {
+        {
+            let $name = $init;
+            println!(concat!(stringify!($name), &quot; = {:?}&quot;), $name);
+            mixed_rules!($($tail)*);
+        }
+    };
+}
+
+fn main() {
+    let a = 42;
+    let b = &quot;Ho-dee-oh-di-oh-di-oh!&quot;;
+    let c = (false, 2, &#39;c&#39;);
+    mixed_rules!(
+        trace a;
+        trace b;
+        trace c;
+        trace b = &quot;They took her where they put the crazies.&quot;;
+        trace b;
+    );
+}
+</span><pre class='rust rust-example-rendered'>
 <span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>mixed_rules</span> {
     () <span class='op'>=&gt;</span> {};
     (<span class='ident'>trace</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>name</span>:<span class='ident'>ident</span>; $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>=&gt;</span> {
@@ -195,24 +206,22 @@ fn main() {
 <p>It is important, however, to keep the macro recursion limit in mind.  <code>macro_rules!</code> does not have <em>any</em> form of tail recursion elimination or optimisation.  It is recommended that, when writing a TT muncher, you make reasonable efforts to keep recursion as limited as possible.  This can be done by adding additional rules to account for variation in the input (as opposed to recursion into an intermediate layer), or by making compromises on the input syntax to make using standard repetitions more tractable.</p>
 
 <h2 id="internal-rules" class='section-header'><a
-                           href="#internal-rules">Internal rules</a></h2><span class='rusttest'>fn main() {
-    #[macro_export]
-    macro_rules! foo {
-        (@as_expr $e:expr) =&gt; {$e};
-    
-        // ...
-    
-        ($($tts:tt)*) =&gt; {
-            foo!(@as_expr $($tts)*)
-        };
-    }
-    
-}</span><pre class='rust rust-example-rendered'>
+                           href="#internal-rules">Internal rules</a></h2><span class='rusttest'>#[macro_export]
+macro_rules! foo {
+    (@as_expr $e:expr) =&gt; {$e};
+
+    ($($tts:tt)*) =&gt; {
+        foo!(@as_expr $($tts)*)
+    };
+}
+
+fn main() {
+    assert_eq!(foo!(42), 42);
+}
+</span><pre class='rust rust-example-rendered'>
 <span class='attribute'>#[<span class='ident'>macro_export</span>]</span>
 <span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>foo</span> {
     (<span class='kw-2'>@</span><span class='ident'>as_expr</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> {<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>};
-
-    <span class='comment'>// ...</span>
 
     ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tts</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>=&gt;</span> {
         <span class='macro'>foo</span><span class='macro'>!</span>(<span class='kw-2'>@</span><span class='ident'>as_expr</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tts</span>)<span class='op'>*</span>)
@@ -269,6 +278,7 @@ fn main() {
     }
     
     let strings: [String; 3] = init_array![String::from(&quot;hi!&quot;); 3];
+    assert_eq!(format!(&quot;{:?}&quot;, strings), &quot;[\&quot;hi!\&quot;, \&quot;hi!\&quot;, \&quot;hi!\&quot;]&quot;);
     
 }</span><pre class='rust rust-example-rendered'>
 <span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>init_array</span> {
@@ -387,6 +397,12 @@ fn main() {
             )
         };
     }
+    
+    macro_rules! replace_expr {
+        ($_t:tt $sub:expr) =&gt; {$sub};
+    }
+    
+    assert_eq!(tuple_default!(i32, bool, String), (0, false, String::new()));
     
 }</span><pre class='rust rust-example-rendered'>
 <span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>tuple_default</span> {

@@ -537,39 +537,42 @@ fn main() {
 
 <p>Repetitions use the same syntax in the expansion.</p>
 
-<p>For example, below is a modified <code>vec!</code> macro which formats each element as a string.  It matches zero or more comma-separated expressions and expands to an expression that constructs a vector.</p>
-<span class='rusttest'>fn main() {
-    macro_rules! vec {
-        (
+<p>For example, below is a macro which formats each element as a string.  It matches zero or more comma-separated expressions and expands to an expression that constructs a vector.</p>
+<span class='rusttest'>macro_rules! vec_strs {
+    (
+        // Start a repetition:
+        $(
+            // Each repeat must contain an expression...
+            $element:expr
+        )
+        // ...separated by commas...
+        ,
+        // ...zero or more times.
+        *
+    ) =&gt; {
+        // Enclose the expansion in a block so that we can use
+        // multiple statements.
+        {
+            let mut v = Vec::new();
+
             // Start a repetition:
             $(
-                // Each repeat must contain an expression...
-                $element:expr
-            )
-            // ...separated by commas...
-            ,
-            // ...zero or more times.
-            *
-        ) =&gt; {
-            // Enclose the expansion in a block so that we can use
-            // multiple statements.
-            {
-                let mut v = Vec::new();
-    
-                // Start a repetition:
-                $(
-                    // Each repeat will contain the following statement, with
-                    // $element replaced with the corresponding expression.
-                    v.push(format!(&quot;{}&quot;, $element));
-                )*
-    
-                v
-            }
-        };
-    }
-    
-}</span><pre class='rust rust-example-rendered'>
-<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>vec</span> {
+                // Each repeat will contain the following statement, with
+                // $element replaced with the corresponding expression.
+                v.push(format!(&quot;{}&quot;, $element));
+            )*
+
+            v
+        }
+    };
+}
+
+fn main() {
+    let s = vec_strs![1, &quot;a&quot;, true, 3.14159f32];
+    assert_eq!(&amp;*s, &amp;[&quot;1&quot;, &quot;a&quot;, &quot;true&quot;, &quot;3.14159&quot;]);
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>vec_strs</span> {
     (
         <span class='comment'>// Start a repetition:</span>
         $(
@@ -634,12 +637,12 @@ fn main() {
 <ul>
 <li><code>item</code>: anything.</li>
 <li><code>block</code>: anything.</li>
-<li><code>stmt</code>: <code>=&gt;</code>, <code>,</code>, <code>;</code>.</li>
-<li><code>pat</code>: <code>=&gt;</code>, <code>,</code>, <code>=</code>, <code>if</code>, <code>in</code>.</li>
-<li><code>expr</code>: <code>=&gt;</code>, <code>,</code>, <code>;</code>.</li>
-<li><code>ty</code>: <code>,</code>, <code>=&gt;</code>, <code>:</code>, <code>=</code>, <code>&gt;</code>, <code>;</code>, <code>as</code>.</li>
+<li><code>stmt</code>: <code>=&gt;</code> <code>,</code> <code>;</code></li>
+<li><code>pat</code>: <code>=&gt;</code> <code>,</code> <code>=</code> <code>if</code> <code>in</code></li>
+<li><code>expr</code>: <code>=&gt;</code> <code>,</code> <code>;</code></li>
+<li><code>ty</code>: <code>,</code> <code>=&gt;</code> <code>:</code> <code>=</code> <code>&gt;</code> <code>;</code> <code>as</code></li>
 <li><code>ident</code>: anything.</li>
-<li><code>path</code>: <code>,</code>, <code>=&gt;</code>, <code>:</code>, <code>=</code>, <code>&gt;</code>, <code>;</code>, <code>as</code>.</li>
+<li><code>path</code>: <code>,</code> <code>=&gt;</code> <code>:</code> <code>=</code> <code>&gt;</code> <code>;</code> <code>as</code></li>
 <li><code>meta</code>: anything.</li>
 <li><code>tt</code>: anything.</li>
 </ul>
@@ -843,19 +846,489 @@ got something else
 <p><strong>TODO</strong>: <code>trace_macros!</code>, <code>log_syntax!</code>, <code>--pretty expanded</code>, <code>--pretty expanded,hygiene</code>.</p>
 </blockquote>
 
+<p><code>rustc</code> provides a number of tools to debug macros.  One of the most useful is <code>trace_macros!</code>, which is a directive to the compiler instructing it to dump every macro invocation prior to expansion.  For example, given the following:</p>
+<span class='rusttest'>// Note: make sure to use a nightly channel compiler.
+#![feature(trace_macros)]
+
+macro_rules! each_tt {
+    () =&gt; {};
+    ($_tt:tt $($rest:tt)*) =&gt; {each_tt!($($rest)*);};
+}
+
+each_tt!(foo bar baz quux);
+trace_macros!(true);
+each_tt!(spim wak plee whum);
+trace_macros!(false);
+each_tt!(trom qlip winp xod);
+
+fn main() {}
+</span><pre class='rust rust-example-rendered'>
+<span class='attribute'>#<span class='op'>!</span>[<span class='ident'>feature</span>(<span class='ident'>trace_macros</span>)]</span>
+
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>each_tt</span> {
+    () <span class='op'>=&gt;</span> {};
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>_tt</span>:<span class='ident'>tt</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>rest</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>=&gt;</span> {<span class='macro'>each_tt</span><span class='macro'>!</span>($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>rest</span>)<span class='op'>*</span>);};
+}
+
+<span class='macro'>each_tt</span><span class='macro'>!</span>(<span class='ident'>foo</span> <span class='ident'>bar</span> <span class='ident'>baz</span> <span class='ident'>quux</span>);
+<span class='macro'>trace_macros</span><span class='macro'>!</span>(<span class='boolval'>true</span>);
+<span class='macro'>each_tt</span><span class='macro'>!</span>(<span class='ident'>spim</span> <span class='ident'>wak</span> <span class='ident'>plee</span> <span class='ident'>whum</span>);
+<span class='macro'>trace_macros</span><span class='macro'>!</span>(<span class='boolval'>false</span>);
+<span class='macro'>each_tt</span><span class='macro'>!</span>(<span class='ident'>trom</span> <span class='ident'>qlip</span> <span class='ident'>winp</span> <span class='ident'>xod</span>);</pre>
+
+<p>The output is:</p>
+
+<pre><code class="language-text">each_tt! { spim wak plee whum }
+each_tt! { wak plee whum }
+each_tt! { plee whum }
+each_tt! { whum }
+each_tt! {  }
+</code></pre>
+
+<p>This is <em>particularly</em> invaluable when debugging deeply recursive macros.</p>
+
+<p>Secondly, there is <code>log_syntax!</code> which causes the compiler to output all tokens passed to it.  For example, this example makes the compiler sing a song:</p>
+<span class='rusttest'>// Note: make sure to use a nightly channel compiler.
+#![feature(log_syntax)]
+
+macro_rules! sing {
+    () =&gt; {};
+    ($tt:tt $($rest:tt)*) =&gt; {log_syntax!($tt); sing!($($rest)*);};
+}
+
+sing! {
+    ^ &lt; @ &lt; . @ *
+    &#39;\x08&#39; &#39;{&#39; &#39;&quot;&#39; _ # &#39; &#39;
+    - @ &#39;$&#39; &amp;&amp; / _ %
+    ! ( &#39;\t&#39; @ | = &gt;
+    ; &#39;\x08&#39; &#39;\&#39;&#39; + &#39;$&#39; ? &#39;\x7f&#39;
+    , # &#39;&quot;&#39; ~ | ) &#39;\x07&#39;
+}
+
+fn main() {}
+</span><pre class='rust rust-example-rendered'>
+<span class='attribute'>#<span class='op'>!</span>[<span class='ident'>feature</span>(<span class='ident'>log_syntax</span>)]</span>
+
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>sing</span> {
+    () <span class='op'>=&gt;</span> {};
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tt</span>:<span class='ident'>tt</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>rest</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>=&gt;</span> {<span class='macro'>log_syntax</span><span class='macro'>!</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tt</span>); <span class='macro'>sing</span><span class='macro'>!</span>($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>rest</span>)<span class='op'>*</span>);};
+}
+
+<span class='macro'>sing</span><span class='macro'>!</span> {
+    <span class='op'>^</span> <span class='op'>&lt;</span> <span class='kw-2'>@</span> <span class='op'>&lt;</span> . <span class='kw-2'>@</span> <span class='op'>*</span>
+    <span class='string'>&#39;\x08&#39;</span> <span class='string'>&#39;{&#39;</span> <span class='string'>&#39;&quot;&#39;</span> _ <span class='attribute'># <span class='string'>&#39; &#39;</span>
+    <span class='op'>-</span> <span class='kw-2'>@</span> <span class='string'>&#39;$&#39;</span> <span class='op'>&amp;&amp;</span> <span class='op'>/</span> _ <span class='op'>%</span>
+    <span class='op'>!</span> ( <span class='string'>&#39;\t&#39;</span> <span class='kw-2'>@</span> <span class='op'>|</span> <span class='op'>=</span> <span class='op'>&gt;</span>
+    ; <span class='string'>&#39;\x08&#39;</span> <span class='string'>&#39;\&#39;&#39;</span> <span class='op'>+</span> <span class='string'>&#39;$&#39;</span> ? <span class='string'>&#39;\x7f&#39;</span>
+    , <span class='attribute'># <span class='string'>&#39;&quot;&#39;</span> <span class='kw-2'>~</span> <span class='op'>|</span> ) <span class='string'>&#39;\x07&#39;</span>
+}</pre>
+
+<p>This can be used to do slightly more targeted debugging than <code>trace_macros!</code>.</p>
+
+<p>Sometimes, it is what the macro <em>expands to</em> that proves problematic.  For this, the <code>--pretty</code> argument to the compiler can be used.  Given the following code:</p>
+<span class='rusttest'>// Shorthand for initialising a `String`.
+macro_rules! S {
+    ($e:expr) =&gt; {String::from($e)};
+}
+
+fn main() {
+    let world = S!(&quot;World&quot;);
+    println!(&quot;Hello, {}!&quot;, world);
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='comment'>// Shorthand for initialising a `String`.</span>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>S</span> {
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> {<span class='ident'>String</span>::<span class='ident'>from</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>)};
+}
+
+<span class='kw'>fn</span> <span class='ident'>main</span>() {
+    <span class='kw'>let</span> <span class='ident'>world</span> <span class='op'>=</span> <span class='macro'>S</span><span class='macro'>!</span>(<span class='string'>&quot;World&quot;</span>);
+    <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;Hello, {}!&quot;</span>, <span class='ident'>world</span>);
+}</pre>
+
+<p>compiled with the following command:</p>
+
+<pre><code class="language-shell">rustc -Z unstable-options --pretty expanded hello.rs
+</code></pre>
+
+<p>produces the following output (modified for formatting):</p>
+<span class='rusttest'>#![feature(no_std, prelude_import)]
+#![no_std]
+#[prelude_import]
+use std::prelude::v1::*;
+#[macro_use]
+extern crate std as std;
+// Shorthand for initialising a `String`.
+fn main() {
+    let world = String::from(&quot;World&quot;);
+    ::std::io::_print(::std::fmt::Arguments::new_v1(
+        {
+            static __STATIC_FMTSTR: &amp;&#39;static [&amp;&#39;static str]
+                = &amp;[&quot;Hello, &quot;, &quot;!\n&quot;];
+            __STATIC_FMTSTR
+        },
+        &amp;match (&amp;world,) {
+             (__arg0,) =&gt; [
+                ::std::fmt::ArgumentV1::new(__arg0, ::std::fmt::Display::fmt)
+            ],
+        }
+    ));
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='attribute'>#<span class='op'>!</span>[<span class='ident'>feature</span>(<span class='ident'>no_std</span>, <span class='ident'>prelude_import</span>)]</span>
+<span class='attribute'>#<span class='op'>!</span>[<span class='ident'>no_std</span>]</span>
+<span class='attribute'>#[<span class='ident'>prelude_import</span>]</span>
+<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>prelude</span>::<span class='ident'>v1</span>::<span class='op'>*</span>;
+<span class='attribute'>#[<span class='ident'>macro_use</span>]</span>
+<span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>std</span> <span class='kw'>as</span> <span class='ident'>std</span>;
+<span class='comment'>// Shorthand for initialising a `String`.</span>
+<span class='kw'>fn</span> <span class='ident'>main</span>() {
+    <span class='kw'>let</span> <span class='ident'>world</span> <span class='op'>=</span> <span class='ident'>String</span>::<span class='ident'>from</span>(<span class='string'>&quot;World&quot;</span>);
+    ::<span class='ident'>std</span>::<span class='ident'>io</span>::<span class='ident'>_print</span>(::<span class='ident'>std</span>::<span class='ident'>fmt</span>::<span class='ident'>Arguments</span>::<span class='ident'>new_v1</span>(
+        {
+            <span class='kw'>static</span> <span class='ident'>__STATIC_FMTSTR</span>: <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;static</span> [<span class='kw-2'>&amp;</span><span class='lifetime'>&#39;static</span> <span class='ident'>str</span>]
+                <span class='op'>=</span> <span class='kw-2'>&amp;</span>[<span class='string'>&quot;Hello, &quot;</span>, <span class='string'>&quot;!\n&quot;</span>];
+            <span class='ident'>__STATIC_FMTSTR</span>
+        },
+        <span class='kw-2'>&amp;</span><span class='kw'>match</span> (<span class='kw-2'>&amp;</span><span class='ident'>world</span>,) {
+             (<span class='ident'>__arg0</span>,) <span class='op'>=&gt;</span> [
+                ::<span class='ident'>std</span>::<span class='ident'>fmt</span>::<span class='ident'>ArgumentV1</span>::<span class='ident'>new</span>(<span class='ident'>__arg0</span>, ::<span class='ident'>std</span>::<span class='ident'>fmt</span>::<span class='ident'>Display</span>::<span class='ident'>fmt</span>)
+            ],
+        }
+    ));
+}</pre>
+
+<p>Other options to <code>--pretty</code> can be listed using <code>rustc -Z unstable-options --help -v</code>; a full list is not provided since, as implied by the name, any such list would be subject to change at any time.</p>
+
 <h2 id="scoping" class='section-header'><a
                            href="#scoping">Scoping</a></h2>
 <blockquote>
-<p><strong>TODO</strong>: scoping in modules, impls, functions.</p>
+<p><strong>TODO</strong>: scoping in modules, functions.</p>
 </blockquote>
+
+<p>The way in which macros are scoped can be somewhat unintuitive.  Firstly, unlike everything else in the languages, macros will remain visible in sub-modules.</p>
+<span class='rusttest'>macro_rules! X { () =&gt; {}; }
+mod a {
+    X!(); // defined
+}
+mod b {
+    X!(); // defined
+}
+mod c {
+    X!(); // defined
+}
+fn main() {}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>X</span> { () <span class='op'>=&gt;</span> {}; }
+<span class='kw'>mod</span> <span class='ident'>a</span> {
+    <span class='macro'>X</span><span class='macro'>!</span>(); <span class='comment'>// defined</span>
+}
+<span class='kw'>mod</span> <span class='ident'>b</span> {
+    <span class='macro'>X</span><span class='macro'>!</span>(); <span class='comment'>// defined</span>
+}
+<span class='kw'>mod</span> <span class='ident'>c</span> {
+    <span class='macro'>X</span><span class='macro'>!</span>(); <span class='comment'>// defined</span>
+}</pre>
+
+<blockquote>
+<p><strong>Note</strong>: In these examples, remember that all of them have the <em>same behaviour</em> when the module contents are in separate files.</p>
+</blockquote>
+
+<p>Secondly, <em>also</em> unlike everything else in the language, macros are only accessible <em>after</em> their definition.  Also note that this example demonstrates how macros do not &quot;leak&quot; out of their defining scope:</p>
+<span class='rusttest'>mod a {
+    // X!(); // undefined
+}
+mod b {
+    // X!(); // undefined
+    macro_rules! X { () =&gt; {}; }
+    X!(); // defined
+}
+mod c {
+    // X!(); // undefined
+}
+fn main() {}
+</span><pre class='rust rust-example-rendered'>
+<span class='kw'>mod</span> <span class='ident'>a</span> {
+    <span class='comment'>// X!(); // undefined</span>
+}
+<span class='kw'>mod</span> <span class='ident'>b</span> {
+    <span class='comment'>// X!(); // undefined</span>
+    <span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>X</span> { () <span class='op'>=&gt;</span> {}; }
+    <span class='macro'>X</span><span class='macro'>!</span>(); <span class='comment'>// defined</span>
+}
+<span class='kw'>mod</span> <span class='ident'>c</span> {
+    <span class='comment'>// X!(); // undefined</span>
+}</pre>
+
+<p>To be clear, this lexical order dependency applies even if you move the macro to an outer scope:</p>
+<span class='rusttest'>mod a {
+    // X!(); // undefined
+}
+macro_rules! X { () =&gt; {}; }
+mod b {
+    X!(); // defined
+}
+mod c {
+    X!(); // defined
+}
+fn main() {}
+</span><pre class='rust rust-example-rendered'>
+<span class='kw'>mod</span> <span class='ident'>a</span> {
+    <span class='comment'>// X!(); // undefined</span>
+}
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>X</span> { () <span class='op'>=&gt;</span> {}; }
+<span class='kw'>mod</span> <span class='ident'>b</span> {
+    <span class='macro'>X</span><span class='macro'>!</span>(); <span class='comment'>// defined</span>
+}
+<span class='kw'>mod</span> <span class='ident'>c</span> {
+    <span class='macro'>X</span><span class='macro'>!</span>(); <span class='comment'>// defined</span>
+}</pre>
+
+<p>However, this dependency <em>does not</em> apply to macros themselves:</p>
+<span class='rusttest'>mod a {
+    // X!(); // undefined
+}
+macro_rules! X { () =&gt; { Y!(); }; }
+mod b {
+    // X!(); // defined, but Y! is undefined
+}
+macro_rules! Y { () =&gt; {}; }
+mod c {
+    X!(); // defined, and so is Y!
+}
+fn main() {}
+</span><pre class='rust rust-example-rendered'>
+<span class='kw'>mod</span> <span class='ident'>a</span> {
+    <span class='comment'>// X!(); // undefined</span>
+}
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>X</span> { () <span class='op'>=&gt;</span> { <span class='macro'>Y</span><span class='macro'>!</span>(); }; }
+<span class='kw'>mod</span> <span class='ident'>b</span> {
+    <span class='comment'>// X!(); // defined, but Y! is undefined</span>
+}
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>Y</span> { () <span class='op'>=&gt;</span> {}; }
+<span class='kw'>mod</span> <span class='ident'>c</span> {
+    <span class='macro'>X</span><span class='macro'>!</span>(); <span class='comment'>// defined, and so is Y!</span>
+}</pre>
+
+<p>Macros can be exported from a module using the <code>#[macro_use]</code> attribute.</p>
+<span class='rusttest'>mod a {
+    // X!(); // undefined
+}
+#[macro_use]
+mod b {
+    macro_rules! X { () =&gt; {}; }
+    X!(); // defined
+}
+mod c {
+    X!(); // defined
+}
+fn main() {}
+</span><pre class='rust rust-example-rendered'>
+<span class='kw'>mod</span> <span class='ident'>a</span> {
+    <span class='comment'>// X!(); // undefined</span>
+}
+<span class='attribute'>#[<span class='ident'>macro_use</span>]</span>
+<span class='kw'>mod</span> <span class='ident'>b</span> {
+    <span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>X</span> { () <span class='op'>=&gt;</span> {}; }
+    <span class='macro'>X</span><span class='macro'>!</span>(); <span class='comment'>// defined</span>
+}
+<span class='kw'>mod</span> <span class='ident'>c</span> {
+    <span class='macro'>X</span><span class='macro'>!</span>(); <span class='comment'>// defined</span>
+}</pre>
+
+<p>Note that this can interact in somewhat bizarre ways due to the fact that identifiers in a macro (including other macros) are only resolved upon expansion:</p>
+<span class='rusttest'>mod a {
+    // X!(); // undefined
+}
+#[macro_use]
+mod b {
+    macro_rules! X { () =&gt; { Y!(); }; }
+    // X!(); // defined, but Y! is undefined
+}
+macro_rules! Y { () =&gt; {}; }
+mod c {
+    X!(); // defined, and so is Y!
+}
+fn main() {}
+</span><pre class='rust rust-example-rendered'>
+<span class='kw'>mod</span> <span class='ident'>a</span> {
+    <span class='comment'>// X!(); // undefined</span>
+}
+<span class='attribute'>#[<span class='ident'>macro_use</span>]</span>
+<span class='kw'>mod</span> <span class='ident'>b</span> {
+    <span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>X</span> { () <span class='op'>=&gt;</span> { <span class='macro'>Y</span><span class='macro'>!</span>(); }; }
+    <span class='comment'>// X!(); // defined, but Y! is undefined</span>
+}
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>Y</span> { () <span class='op'>=&gt;</span> {}; }
+<span class='kw'>mod</span> <span class='ident'>c</span> {
+    <span class='macro'>X</span><span class='macro'>!</span>(); <span class='comment'>// defined, and so is Y!</span>
+}</pre>
+
+<p>Another complication is that <code>#[macro_use]</code> applied to an <code>extern crate</code> <em>does not</em> behave this way: such declarations are effectively <em>hoisted</em> to the top of the module.  Thus, assuming <code>X!</code> is defined in an external crate called <code>mac</code>, the following holds:</p>
+<span class='rusttest'>mod a {
+    // X!(); // defined, but Y! is undefined
+}
+macro_rules! Y { () =&gt; {}; }
+mod b {
+    X!(); // defined, and so is Y!
+}
+#[macro_use] extern crate macs;
+mod c {
+    X!(); // defined, and so is Y!
+}
+fn main() {}
+</span><pre class='rust rust-example-rendered'>
+<span class='kw'>mod</span> <span class='ident'>a</span> {
+    <span class='comment'>// X!(); // defined, but Y! is undefined</span>
+}
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>Y</span> { () <span class='op'>=&gt;</span> {}; }
+<span class='kw'>mod</span> <span class='ident'>b</span> {
+    <span class='macro'>X</span><span class='macro'>!</span>(); <span class='comment'>// defined, and so is Y!</span>
+}
+<span class='attribute'>#[<span class='ident'>macro_use</span>]</span> <span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>macs</span>;
+<span class='kw'>mod</span> <span class='ident'>c</span> {
+    <span class='macro'>X</span><span class='macro'>!</span>(); <span class='comment'>// defined, and so is Y!</span>
+}</pre>
+
+<p>Finally, note that these scoping behaviours apply to <em>functions</em> as well, with the exception of <code>#[macro_use]</code> (which isn&#39;t applicable):</p>
+<span class='rusttest'>macro_rules! X {
+    () =&gt; { Y!() };
+}
+
+fn a() {
+    macro_rules! Y { () =&gt; {&quot;Hi!&quot;} }
+    assert_eq!(X!(), &quot;Hi!&quot;);
+    {
+        assert_eq!(X!(), &quot;Hi!&quot;);
+        macro_rules! Y { () =&gt; {&quot;Bye!&quot;} }
+        assert_eq!(X!(), &quot;Bye!&quot;);
+    }
+    assert_eq!(X!(), &quot;Hi!&quot;);
+}
+
+fn b() {
+    macro_rules! Y { () =&gt; {&quot;One more&quot;} }
+    assert_eq!(X!(), &quot;One more&quot;);
+}
+
+fn main() {
+    a();
+    b();
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>X</span> {
+    () <span class='op'>=&gt;</span> { <span class='macro'>Y</span><span class='macro'>!</span>() };
+}
+
+<span class='kw'>fn</span> <span class='ident'>a</span>() {
+    <span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>Y</span> { () <span class='op'>=&gt;</span> {<span class='string'>&quot;Hi!&quot;</span>} }
+    <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='macro'>X</span><span class='macro'>!</span>(), <span class='string'>&quot;Hi!&quot;</span>);
+    {
+        <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='macro'>X</span><span class='macro'>!</span>(), <span class='string'>&quot;Hi!&quot;</span>);
+        <span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>Y</span> { () <span class='op'>=&gt;</span> {<span class='string'>&quot;Bye!&quot;</span>} }
+        <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='macro'>X</span><span class='macro'>!</span>(), <span class='string'>&quot;Bye!&quot;</span>);
+    }
+    <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='macro'>X</span><span class='macro'>!</span>(), <span class='string'>&quot;Hi!&quot;</span>);
+}
+
+<span class='kw'>fn</span> <span class='ident'>b</span>() {
+    <span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>Y</span> { () <span class='op'>=&gt;</span> {<span class='string'>&quot;One more&quot;</span>} }
+    <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='macro'>X</span><span class='macro'>!</span>(), <span class='string'>&quot;One more&quot;</span>);
+}</pre>
+
+<p>These scoping rules are why a common piece of advice is to place all macros which should be accessible &quot;crate wide&quot; at the very top of your root module, before any other modules.  This ensures they are available <em>consistently</em>.</p>
 
 <h2 id="import/export" class='section-header'><a
                            href="#import/export">Import/Export</a></h2>
 <blockquote>
 <p><strong>TODO</strong>: <code>macro_use</code>, <code>macro_export</code>.</p>
+</blockquote>
 
+<p>There are two ways to expose a macro to a wider scope.  The first is the <code>#[macro_use]</code> attribute.  This can be applied to <em>either</em> modules or external crates.  For example:</p>
+<span class='rusttest'>#[macro_use]
+mod macros {
+    macro_rules! X { () =&gt; { Y!(); } }
+    macro_rules! Y { () =&gt; {} }
+}
+
+X!();
+
+fn main() {}
+</span><pre class='rust rust-example-rendered'>
+<span class='attribute'>#[<span class='ident'>macro_use</span>]</span>
+<span class='kw'>mod</span> <span class='ident'>macros</span> {
+    <span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>X</span> { () <span class='op'>=&gt;</span> { <span class='macro'>Y</span><span class='macro'>!</span>(); } }
+    <span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>Y</span> { () <span class='op'>=&gt;</span> {} }
+}
+
+<span class='macro'>X</span><span class='macro'>!</span>();</pre>
+
+<p>Macros can be exported from the current crate using <code>#[macro_export]</code>.  Note that this <em>ignores</em> all visibility.</p>
+
+<p>Given the following definition for a library package <code>macs</code>:</p>
+<span class='rusttest'>fn main() {
+    mod macros {
+        #[macro_export] macro_rules! X { () =&gt; { Y!(); } }
+        #[macro_export] macro_rules! Y { () =&gt; {} }
+    }
+    
+    // X! and Y! are *not* defined here, but *are* exported,
+    // despite `macros` being private.
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='kw'>mod</span> <span class='ident'>macros</span> {
+    <span class='attribute'>#[<span class='ident'>macro_export</span>]</span> <span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>X</span> { () <span class='op'>=&gt;</span> { <span class='macro'>Y</span><span class='macro'>!</span>(); } }
+    <span class='attribute'>#[<span class='ident'>macro_export</span>]</span> <span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>Y</span> { () <span class='op'>=&gt;</span> {} }
+}
+
+<span class='comment'>// X! and Y! are *not* defined here, but *are* exported,</span>
+<span class='comment'>// despite `macros` being private.</span></pre>
+
+<p>The following code will work as expected:</p>
+<span class='rusttest'>X!(); // X is defined
+#[macro_use] extern crate macs;
+X!();
+
+fn main() {}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>X</span><span class='macro'>!</span>(); <span class='comment'>// X is defined</span>
+<span class='attribute'>#[<span class='ident'>macro_use</span>]</span> <span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>macs</span>;
+<span class='macro'>X</span><span class='macro'>!</span>();</pre>
+
+<p>Note that you can <em>only</em> <code>#[macro_use]</code> an external crate from the root module.</p>
+
+<p>Finally, when importing macros from an external crate, you can control <em>which</em> macros you import.  You can use this to limit namespace pollution, or to override specific macros, like so:</p>
+<span class='rusttest'>// Import *only* the `X!` macro.
+#[macro_use(X)] extern crate macs;
+
+// X!(); // X is defined, but Y! is undefined
+
+macro_rules! Y { () =&gt; {} }
+
+X!(); // X is defined, and so is Y!
+
+fn main() {}
+</span><pre class='rust rust-example-rendered'>
+<span class='comment'>// Import *only* the `X!` macro.</span>
+<span class='attribute'>#[<span class='ident'>macro_use</span>(<span class='ident'>X</span>)]</span> <span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>macs</span>;
+
+<span class='comment'>// X!(); // X is defined, but Y! is undefined</span>
+
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>Y</span> { () <span class='op'>=&gt;</span> {} }
+
+<span class='macro'>X</span><span class='macro'>!</span>(); <span class='comment'>// X is defined, and so is Y!</span>
+
+<span class='kw'>fn</span> <span class='ident'>main</span>() {}</pre>
+
+<blockquote>
 <p><strong>TODO</strong>: <code>$crate</code>.</p>
 </blockquote>
+
+<p>When exporting macros, it is often useful to refer to non-macro symbols in the defining crate.  Because crates can be renamed, there is a special substitution variable available: <code>$crate</code>.  This will <em>always</em> expand to an absolute path prefix to the containing crate (<em>e.g.</em> <code>:: macs</code>).</p>
+
+<p>Note that this does <em>not</em> work for macros, since macros do not interact with regular name resolution in any way.  That is, you cannot use something like <code>$crate::Y!</code> to refer to a particular macro within your crate.  The implication, combined with selective imports via <code>#[macro_use]</code> is that there is currently <em>no way</em> to guarantee any given macro will be available when imported by another crate.</p>
+
+<p>It is recommended that you <em>always</em> use absolute paths to non-macro names, to avoid conflicts, <em>including</em> names in the standard library.</p>
 
 <div class="footnotes">
 <hr>

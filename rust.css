@@ -223,10 +223,16 @@ pre {
     font-size: 13px;
     word-break: break-all;
 }
+pre code {
+    background-color: transparent;
+    border: 0;
+}
 code {
     padding: 0 2px;
     color: #E1D4A9;
     font-size: 13px;
+    background-color: #222;
+    border-bottom: 1px solid #181818;
 }
 pre code {
     padding: 0;

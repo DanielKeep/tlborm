@@ -56,16 +56,18 @@
 <h3 id="repetition-with-replacement" class='section-header'><a
                            href="#repetition-with-replacement">Repetition with replacement</a></h3>
 <p>Counting things in a macro is a surprisingly tricky task.  The simplest way is to use replacement with a repetition match.</p>
-<span class='rusttest'>fn main() {
-    macro_rules! replace_expr {
-        ($_t:tt $sub:expr) =&gt; {$sub};
-    }
-    
-    macro_rules! count_tts {
-        ($($tts:tt)*) =&gt; {0usize $(+ replace_expr!($tts 1usize))*};
-    }
-    
-}</span><pre class='rust rust-example-rendered'>
+<span class='rusttest'>macro_rules! replace_expr {
+    ($_t:tt $sub:expr) =&gt; {$sub};
+}
+
+macro_rules! count_tts {
+    ($($tts:tt)*) =&gt; {0usize $(+ replace_expr!($tts 1usize))*};
+}
+
+fn main() {
+    assert_eq!(count_tts!(0 1 2), 3);
+}
+</span><pre class='rust rust-example-rendered'>
 <span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>replace_expr</span> {
     (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>_t</span>:<span class='ident'>tt</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>sub</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> {<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>sub</span>};
 }
@@ -86,13 +88,15 @@
 <h3 id="recursion" class='section-header'><a
                            href="#recursion">Recursion</a></h3>
 <p>An older approach is to use recursion.</p>
-<span class='rusttest'>fn main() {
-    macro_rules! count_tts {
-        () =&gt; {0usize};
-        ($_head:tt $($tail:tt)*) =&gt; {1usize + count_tts!($($tail)*)};
-    }
-    
-}</span><pre class='rust rust-example-rendered'>
+<span class='rusttest'>macro_rules! count_tts {
+    () =&gt; {0usize};
+    ($_head:tt $($tail:tt)*) =&gt; {1usize + count_tts!($($tail)*)};
+}
+
+fn main() {
+    assert_eq!(count_tts!(0 1 2), 3);
+}
+</span><pre class='rust rust-example-rendered'>
 <span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>count_tts</span> {
     () <span class='op'>=&gt;</span> {<span class='number'>0usize</span>};
     (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>_head</span>:<span class='ident'>tt</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>=&gt;</span> {<span class='number'>1usize</span> <span class='op'>+</span> <span class='macro'>count_tts</span><span class='macro'>!</span>($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>)<span class='op'>*</span>)};
@@ -202,16 +206,18 @@ fn main() {
 <h3 id="slice-length" class='section-header'><a
                            href="#slice-length">Slice length</a></h3>
 <p>A third approach is to help the compiler construct a shallow AST that won&#39;t lead to a stack overflow.  This can be done by constructing an array literal and calling the <code>len</code> method.</p>
-<span class='rusttest'>fn main() {
-    macro_rules! replace_expr {
-        ($_t:tt $sub:expr) =&gt; {$sub};
-    }
-    
-    macro_rules! count_tts {
-        ($($tts:tt)*) =&gt; {&lt;[()]&gt;::len(&amp;[$(replace_expr!($tts ())),*])};
-    }
-    
-}</span><pre class='rust rust-example-rendered'>
+<span class='rusttest'>macro_rules! replace_expr {
+    ($_t:tt $sub:expr) =&gt; {$sub};
+}
+
+macro_rules! count_tts {
+    ($($tts:tt)*) =&gt; {&lt;[()]&gt;::len(&amp;[$(replace_expr!($tts ())),*])};
+}
+
+fn main() {
+    assert_eq!(count_tts!(0 1 2), 3);
+}
+</span><pre class='rust rust-example-rendered'>
 <span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>replace_expr</span> {
     (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>_t</span>:<span class='ident'>tt</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>sub</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> {<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>sub</span>};
 }
