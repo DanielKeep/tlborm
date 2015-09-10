@@ -32,7 +32,7 @@ Due to the order that macros are expanded in, it is (as of Rust 1.2) impossible 
 
 An alternative is to use recursion and pass a callback.  Here is a trace of the above example to demonstrate how this takes place:
 
-```rust
+```ignore
 recognise_tree! { expand_to_larch ! (  ) }
 println! { "I don't know; some kind of birch maybe?" }
 // ...
@@ -78,6 +78,19 @@ macro_rules! mixed_rules {
         }
     };
 }
+# 
+# fn main() {
+#     let a = 42;
+#     let b = "Ho-dee-oh-di-oh-di-oh!";
+#     let c = (false, 2, 'c');
+#     mixed_rules!(
+#         trace a;
+#         trace b;
+#         trace c;
+#         trace b = "They took her where they put the crazies.";
+#         trace b;
+#     );
+# }
 ```
 
 This pattern is perhaps the *most powerful* macro parsing technique available, allowing one to parse grammars of significant complexity.
@@ -100,12 +113,14 @@ It is important, however, to keep the macro recursion limit in mind.  `macro_rul
 macro_rules! foo {
     (@as_expr $e:expr) => {$e};
 
-    // ...
-
     ($($tts:tt)*) => {
         foo!(@as_expr $($tts)*)
     };
 }
+# 
+# fn main() {
+#     assert_eq!(foo!(42), 42);
+# }
 ```
 
 Because macros do not interact with regular item privacy or lookup, any public macro *must* bring with it all other macros that it depends on.  This can lead to pollution of the global macro namespace, or even conflicts with macros from other crates.  It may also cause confusion to users who attempt to *selectively* import macros: they must transitively import *all* macros, including ones that may not be publicly documented.
@@ -120,7 +135,7 @@ Additionally, internal rules will often come *before* any "bare" rules, to avoid
 
 If exporting at least one internal macro is unavoidable (*e.g.* you have many macros that depend on a common set of utility rules), you can use this pattern to combine *all* internal macros into a single uber-macro.
 
-```rust
+```ignore
 macro_rules! crate_name_util {
     (@as_expr $e:expr) => {$e};
     (@as_item $i:item) => {$i};
@@ -151,13 +166,14 @@ macro_rules! init_array {
 }
 
 let strings: [String; 3] = init_array![String::from("hi!"); 3];
+# assert_eq!(format!("{:?}", strings), "[\"hi!\", \"hi!\", \"hi!\"]");
 ```
 
 All macros in Rust **must** result in a complete, supported syntax element (such as an expression, item, *etc.*).  This means that it is impossible to have a macro expand to a partial construct.
 
 One might hope that the above example could be more directly expressed like so:
 
-```rust
+```ignore
 macro_rules! init_array {
     (@accum 0, $_e:expr) => {/* empty */};
     (@accum 1, $e:expr) => {$e};
@@ -202,7 +218,7 @@ Push-down accumulation is frequently used as part of [incremental TT munchers](#
 
 ## Repetition replacement
 
-```rust
+```ignore
 macro_rules! replace_expr {
     ($_t:tt $sub:expr) => {$sub};
 }
@@ -225,6 +241,12 @@ macro_rules! tuple_default {
         )
     };
 }
+# 
+# macro_rules! replace_expr {
+#     ($_t:tt $sub:expr) => {$sub};
+# }
+# 
+# assert_eq!(tuple_default!(i32, bool, String), (0, false, String::new()));
 ```
 
 > **<abbr title="Just for this example">JFTE</abbr>**: we *could* have simply used `$tup_tys::default()`.
@@ -233,7 +255,7 @@ Here, we are not actually *using* the matched types.  Instead, we throw them awa
 
 ## Trailing separators
 
-```rust
+```ignore
 macro_rules! match_exprs {
     ($($exprs:expr),* $(,)*) => {...};
 }
@@ -381,7 +403,7 @@ Note that the example at the top combines some of the rules together (for exampl
 
 If you want to extract the actual *value* of the counter, this can be done using a regular [counter macro](../blk/README.html#counting).  For the example above, the terminal rules can be replaced with the following:
 
-```rust
+```ignore
 macro_rules! abacus {
     // ...
 
@@ -402,7 +424,7 @@ macro_rules! replace_expr {
 
 > **<abbr title="Just for this example">JFTE</abbr>**: strictly speaking, the above formulation of `abacus!` is needlessly complex.  It can be implemented much more efficiently using repetition, provided you *do not* need to match against the counter's value in a macro:
 >
-> ```rust
+> ```ignore
 > macro_rules! abacus {
 >     (-) => {-1};
 >     (+) => {1};

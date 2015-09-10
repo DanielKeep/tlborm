@@ -19,13 +19,13 @@ Ook! is interesting because it is known to be Turing-complete, meaning that any 
 
 ## Implementation
 
-```rust
+```ignore
 #![recursion_limit = "158"]
 ```
 
 This is, in fact, the lowest possible recursion limit for which the example program provided at the end will actually compile.  If you're wondering what could be so fantastically complex that it would *justify* a recursion limit nearly five times the default limit... [take a wild guess](https://en.wikipedia.org/wiki/Hello_world_program).
 
-```rust
+```ignore
 type CellType = u8;
 const MEM_SIZE: usize = 30_000;
 ```
@@ -34,7 +34,7 @@ These are here purely to ensure they are visible to the macro expansion.[^*]
 
 [^*]: They *could* have been defined within the macro, but then they would have to have been explicitly passed around (due to hygiene).  To be honest, by the time I realised I *needed* to define these, the macro was already mostly written and... well, would *you* want to go through and fix this thing up if you didn't *absolutely need* to?
 
-```rust
+```ignore
 macro_rules! Ook {
 ```
 
@@ -49,7 +49,7 @@ A few small notes:
 * We are expanding into a function largely so that we can use `try!` to simplify error handling.
 * The use of underscore-prefixed names is so that the compiler will not complain about unused functions or variables if, for example, the user writes an Ook! program that does no I/O.
 
-```rust
+```ignore
     (@start $($Ooks:tt)*) => {
         {
             fn ook() -> ::std::io::Result<Vec<CellType>> {
@@ -97,13 +97,13 @@ The general form of these rules is `(@e $syms; ($input))`.  As you can see from 
 
 First, is the rule that terminates our recursion: once we have no more input, we stop.
 
-```rust
+```ignore
     (@e $syms:tt; ()) => {};
 ```
 
 Next, we have a single rule for *almost* each opcode.  For these, we strip off the opcode, emit the corresponding Rust code, then recurse on the input tail: a textbook [TT muncher](../pat/README.html#incremental-tt-munchers).
 
-```rust
+```ignore
     // Increment pointer.
     (@e ($a:expr, $i:expr, $inc:expr, $dec:expr, $r:expr, $w:expr, $re:expr);
         (Ook. Ook? $($tail:tt)*))
@@ -163,7 +163,7 @@ Here is where things get more complicated.  This opcode, `Ook! Ook?`, marks the 
 
 > **Note**: this is *not* part of the larger code.
 >
-> ```rust
+> ```ignore
 > while memory[ptr] != 0 {
 >     // Contents of loop
 > }
@@ -173,7 +173,7 @@ Of course, we cannot *actually* emit an incomplete loop.  This *could* be solved
 
 The solution to this is to actually split the input into two parts: everything *inside* the loop, and everything *after* it.  The `@x` rules handle the first, `@s` the latter.
 
-```rust
+```ignore
     (@e ($a:expr, $i:expr, $inc:expr, $dec:expr, $r:expr, $w:expr, $re:expr);
         (Ook! Ook? $($tail:tt)*))
     => {
@@ -209,7 +209,7 @@ First is a rule to detect when we find the matching `Ook? Ook!` sequence that cl
 
 Note that we *do not* need to do anything with the remaining input tail (that will be handled by the `@s` rules).
 
-```rust
+```ignore
     (@x $syms:tt; (); ($($buf:tt)*);
         (Ook? Ook! $($tail:tt)*))
     => {
@@ -220,7 +220,7 @@ Note that we *do not* need to do anything with the remaining input tail (that wi
 
 Next, we have rules for entering and exiting nested loops.  These adjust the counter and add the opcodes to the buffer.
 
-```rust    
+```ignore
     (@x $syms:tt; ($($depth:tt)*); ($($buf:tt)*);
         (Ook! Ook? $($tail:tt)*))
     => {
@@ -240,7 +240,7 @@ Finally, we have a rule for "everything else".  Note the `$op0` and `$op1` captu
 
 Here, we leave `$depth` untouched and just add the opcodes to the buffer.
 
-```rust
+```ignore
     (@x $syms:tt; $depth:tt; ($($buf:tt)*);
         (Ook $op0:tt Ook $op1:tt $($tail:tt)*))
     => {
@@ -254,7 +254,7 @@ This is *broadly* the same as loop extraction, except we don't care about the *c
 
 As such, these rules are presented without further exposition.
 
-```rust
+```ignore
     // End of loop.
     (@s $syms:tt; ();
         (Ook? Ook! $($tail:tt)*))
@@ -292,7 +292,7 @@ It is worth noting that because this formulation simply matches *all* tokens pro
 
 When you are writing, modifying, or debugging a macro like this, it is wise to temporarily prefix rules such as this one with something, such as `@entry`.  This prevents the infinite recursion case, and you are more likely to get matcher errors at the appropriate place.
 
-```rust
+```ignore
     ($($Ooks:tt)*) => {
         Ook!(@start $($Ooks)*)
     };
@@ -303,7 +303,7 @@ When you are writing, modifying, or debugging a macro like this, it is wise to t
 
 Here, finally, is our test program.
 
-```rust
+```ignore
 fn main() {
     let _ = Ook!(
         Ook. Ook?  Ook. Ook.  Ook. Ook.  Ook. Ook.

@@ -16,11 +16,15 @@ macro_rules! replace_expr {
 macro_rules! count_tts {
     ($($tts:tt)*) => {0usize $(+ replace_expr!($tts 1usize))*};
 }
+# 
+# fn main() {
+#     assert_eq!(count_tts!(0 1 2), 3);
+# }
 ```
 
 This is much better, but will likely *crash the compiler* with inputs of around 500 or so tokens.  Consider that the output will look something like this:
 
-```rust
+```ignore
 0usize + 1usize + /* ~500 `+ 1usize`s */ + 1usize
 ```
 
@@ -35,6 +39,10 @@ macro_rules! count_tts {
     () => {0usize};
     ($_head:tt $($tail:tt)*) => {1usize + count_tts!($($tail)*)};
 }
+# 
+# fn main() {
+#     assert_eq!(count_tts!(0 1 2), 3);
+# }
 ```
 
 > **Note**: As of `rustc` 1.2, the compiler has *grevious* performance problems when large numbers of integer literals of unknown type must undergo inference.  We are using explicitly `usize`-typed literals here to avoid that.
@@ -105,6 +113,10 @@ macro_rules! replace_expr {
 macro_rules! count_tts {
     ($($tts:tt)*) => {<[()]>::len(&[$(replace_expr!($tts ())),*])};
 }
+# 
+# fn main() {
+#     assert_eq!(count_tts!(0 1 2), 3);
+# }
 ```
 
 This has been tested to work up to 10,000 tokens, and can probably go much higher.  The *downside* is that as of Rust 1.2, this *cannot* be used to produce a constant expression.  Although the result can be optimised to a simple constant (in debug builds it compiles down to a load from memory), it still cannot be used in constant positions (such as the value of `const`s, or a fixed array's size).

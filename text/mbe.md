@@ -62,7 +62,7 @@ Token trees are somewhere between tokens and the AST.  Firstly, *almost* all tok
 
 The only basic tokens that are *not* leaves are the "grouping" tokens: `(...)`, `[...]`, and `{...}`.  These three are the *interior nodes* of token trees, and what give them their structure.  To give a concrete example, this sequence of tokens:
 
-```rust
+```ignore
 a + b + (c + d[0]) + e
 ```
 
@@ -129,7 +129,7 @@ The fourth is essentially a variation which is *not* available to macros.  In fa
 
 Disregarding all but the third form (`$name ! $arg`), the question becomes: how does the Rust parser know what `$arg` looks like for every possible macro?  The answer is that it doesn't *have to*.  Instead, the argument of a macro invocation is a *single* token tree.  More specifically, it is a single, *non-leaf* token tree; `(...)`, `[...]`, or `{...}`.  With that knowledge, it should become apparent how the parser can understand all of the following invocation forms:
 
-```rust
+```ignore
 bitflags! {
     flags Color: u8 {
         const RED    = 0b0001,
@@ -222,7 +222,7 @@ The compiler will take this AST node and completely replace the macro's invocati
 
 For example, consider the following:
 
-```rust
+```ignore
 let eight = 2 * four!();
 ```
 
@@ -263,7 +263,7 @@ From context, `four!()` *must* expand to an expression (the initialiser can *onl
 
 This can be written out like so:
 
-```rust
+```ignore
 let eight = 2 * (1 + 3);
 ```
 
@@ -276,19 +276,19 @@ It is important to understand that macro expansions are treated as AST nodes, as
 
 There are two further things to note about expansion.  The first is what happens when a syntax extension expands to something that contains *another* syntax extension invocation.  For example, consider an alternative definition of `four!`; what happens if it expands to `1 + three!()`?
 
-```rust
+```ignore
 let x = four!();
 ```
 
 Expands to:
 
-```rust
+```ignore
 let x = 1 + three!();
 ```
 
 This is resolved by the compiler checking the result of expansions for additional macro invocations, and expanding them.  Thus, a second expansion step turns the above into:
 
-```rust
+```ignore
 let x = 1 + 3;
 ```
 
@@ -304,7 +304,7 @@ This limit can be raised using the `#![recursion_limit="…"]` attribute, though
 
 With all that in mind, we can introduce `macro_rules!` itself.  As noted previously, `macro_rules!` is *itself* a syntax extension, meaning it is *technically* not part of the Rust syntax.  It uses the following form:
 
-```rust
+```ignore
 macro_rules! $name {
     $rule0 ;
     $rule1 ;
@@ -317,7 +317,7 @@ There must be *at least* one rule, and you can omit the semicolon after the last
 
 Where each "`rule`" looks like so:
 
-```rust
+```ignore
     ($pattern) => {$expansion}
 ```
 
@@ -335,7 +335,7 @@ If the input matches the pattern, the invocation is replaced by the `expansion`;
 
 The simplest example is of an empty pattern:
 
-```rust
+```ignore
 macro_rules! four {
     () => {1 + 3};
 }
@@ -347,7 +347,7 @@ Note that the specific grouping tokens you use when you invoke the macro *are no
 
 Patterns can also contain literal token trees, which must be matched exactly.  This is done by simply writing the token trees normally.  For example, to match the sequence `4 fn ['spang "whammo"] @_@`, you would use:
 
-```rust
+```ignore
 macro_rules! gibberish {
     (4 fn ['spang "whammo"] @_@) => {...};
 }
@@ -378,7 +378,7 @@ Captures are written as a dollar (`$`) followed by an identifier, a colon (`:`),
 
 For example, here is a macro which captures its input as an expression:
 
-```rust
+```ignore
 macro_rules! one_expression {
     ($e:expr) => {...};
 }
@@ -390,7 +390,7 @@ You can mix literal token trees and captures, within limits (explained below).
 
 A capture `$name:kind` can be substituted into the expansion by writing `$name`.  For example:
 
-```rust
+```ignore
 macro_rules! times_five {
     ($e:expr) => {5 * $e};
 }
@@ -459,7 +459,7 @@ macro_rules! vec_strs {
 
 Once the parser begins consuming tokens for a capture, *it cannot stop or backtrack*.  This means that the second rule of the following macro *cannot ever match*, no matter what input is provided:
 
-```rust
+```ignore
 macro_rules! dead_rule {
     ($e:expr) => { ... };
     ($i:ident +) => { ... };
