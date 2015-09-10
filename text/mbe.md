@@ -473,12 +473,12 @@ To defend against future syntax changes altering the interpretation of macro inp
 
 * `item`: anything.
 * `block`: anything.
-* `stmt`: `=>`, `,`, `;`.
-* `pat`: `=>`, `,`, `=`, `if`, `in`.
-* `expr`: `=>`, `,`, `;`.
-* `ty`: `,`, `=>`, `:`, `=`, `>`, `;`, `as`.
+* `stmt`: `=>` `,` `;`
+* `pat`: `=>` `,` `=` `if` `in`
+* `expr`: `=>` `,` `;`
+* `ty`: `,` `=>` `:` `=` `>` `;` `as`
 * `ident`: anything.
-* `path`: `,`, `=>`, `:`, `=`, `>`, `;`, `as`.
+* `path`: `,` `=>` `:` `=` `>` `;` `as`
 * `meta`: anything.
 * `tt`: anything.
 
