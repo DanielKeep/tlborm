@@ -870,7 +870,24 @@ mod c {
 # fn main() {}
 ```
 
-Finally, note that with the exception of `#[macro_use]` (which doesn't apply), these scoping behaviours apply to *functions* as well:
+Another complication is that `#[macro_use]` applied to an `extern crate` *does not* behave this way: such declarations are effectively *hoisted* to the top of the module.  Thus, assuming `X!` is defined in an external crate called `mac`, the following holds:
+
+```ignore
+mod a {
+    // X!(); // defined, but Y! is undefined
+}
+macro_rules! Y { () => {}; }
+mod b {
+    X!(); // defined, and so is Y!
+}
+#[macro_use] extern crate macs;
+mod c {
+    X!(); // defined, and so is Y!
+}
+# fn main() {}
+```
+
+Finally, note that these scoping behaviours apply to *functions* as well, with the exception of `#[macro_use]` (which isn't applicable):
 
 ```rust
 macro_rules! X {
