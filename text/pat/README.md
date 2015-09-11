@@ -127,9 +127,9 @@ Because macros do not interact with regular item privacy or lookup, any public m
 
 A good solution is to conceal what would otherwise be other public macros *inside* the macro being exported.  The above example shows how the common `as_expr!` macro could be moved *into* the publicly exported macro that is using it.
 
-The reason for using `@` is that, as of Rust 1.2, the `@` token is *not* used *anywhere* in the Rust grammar; as such, it cannot possibly conflict with anything.  Other symbols or unique prefixes may be used as desired, but use of `@` has started to become widespread, so using it may aid readers in understanding your code.
+The reason for using `@` is that, as of Rust 1.2, the `@` token is *not* used in prefix position; as such, it cannot conflict with anything.  Other symbols or unique prefixes may be used as desired, but use of `@` has started to become widespread, so using it may aid readers in understanding your code.
 
-> **Note**: the `@` token is a hold-over from when Rust used sigils to denote the various built-in pointer types.  `@` in particular was for garbage-collected pointers.
+> **Note**: the `@` token was previously used in prefix position to denote a garbage-collected pointer, back when the language used sigils to denote pointer types.  Its only *current* purpose is for binding names to patterns.  For this, however, it is used as an *infix* operator, and thus does not conflict with its use here.
 
 Additionally, internal rules will often come *before* any "bare" rules, to avoid issues with `macro_rules!` incorrectly attempting to parse an internal invocation as something it cannot possibly be, such as an expression.
 
