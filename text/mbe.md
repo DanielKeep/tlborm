@@ -6,9 +6,7 @@ In terms of learning resources, there is also the [Macros chapter of the Rust Bo
 
 ## Rust Source Analysis
 
-> **TODO**: How is source text lexed and then parsed?
-
-Before talking about *macros*, it is worthwhile discussing the general mechanism they are built on: *syntax extensions*.  To do *that*, we must discuss how Rust source is processed by the compiler.
+Before talking about *macros*, it is worthwhile to discuss the general mechanism they are built on: *syntax extensions*.  To do *that*, we must discuss how Rust source is processed by the compiler.
 
 The first stage of compilation for a Rust program is tokenisation.  This is where the source text is transformed into a sequence of tokens (*i.e.* indivisible lexical units; the programming language equivalent of "words").  Rust has various kinds of tokens, such as:
 
@@ -19,7 +17,7 @@ The first stage of compilation for a Rust program is tokenisation.  This is wher
 * Strings: `""`, `"Leicester"`, `r##"venezuelan beaver"##`, …
 * Symbols: `[`, `:`, `::`, `->`, `@`, `<-`, …
 
-…among others.  There are some things to note about the above: first, `self` is both an identifier *and* a keyword.  In almost all cases, `self` is a keyword, but it *is* possible for it to *become* a keyword, which will come up later (along with much cursing).  Secondly, the list of keywords includes some suspicious entries such as `yield` and `macro` that aren't *actually* in the language, but *are* parsed by the compiler—these are reserved for future use.  Third, the list of symbols *also* includes entries that aren't used by the language.  In the case of `<-`, it is vestigial: it was removed from the grammar, but not from the lexer.  As a final point, note that `::` is a distinct token; it is not simply two adjacent `:` tokens.  The same is true of all multi-character symbol tokens in Rust, as of Rust 1.2. [^wither-at]
+…among others.  There are some things to note about the above: first, `self` is both an identifier *and* a keyword.  In almost all cases, `self` is a keyword, but it *is* possible for it to be *treated* as an identifier, which will come up later (along with much cursing).  Secondly, the list of keywords includes some suspicious entries such as `yield` and `macro` that aren't *actually* in the language, but *are* parsed by the compiler—these are reserved for future use.  Third, the list of symbols *also* includes entries that aren't used by the language.  In the case of `<-`, it is vestigial: it was removed from the grammar, but not from the lexer.  As a final point, note that `::` is a distinct token; it is not simply two adjacent `:` tokens.  The same is true of all multi-character symbol tokens in Rust, as of Rust 1.2. [^wither-at]
 
 [^wither-at]: `@` has a purpose, though most people seem to forget about it completely: it is used in patterns to bind a non-terminal part of the pattern to a name.  Even a member of the Rust core team, proof-reading this chapter, who *specifically* brought up this section, didn't remember that `@` has a purpose.  Poor, poor swirly.
 
@@ -57,8 +55,6 @@ The AST contains the structure of the *entire* program, though it is based on pu
 It is *after* the AST has been constructed that macros are processed.  However, before we can discuss that, we have to talk about token trees.
 
 ## Token trees
-
-> **TODO**: What is a token, what is a token tree.  Mention NTs.
 
 Token trees are somewhere between tokens and the AST.  Firstly, *almost* all tokens are also token trees; more specifically, they are *leaves*.  There is one other kind of thing that can be a token tree leaf, but we will come back to that later.
 
@@ -112,10 +108,6 @@ One other aspect of this to note: it is *impossible* to have an unpaired paren, 
 
 ## Macros in the AST
 
-> **TODO**: The `ident ! $tt` syntax, that it might be a syntax extension (not a macro).
-
-> **TODO**: Talk about the various classes of syntax extension, and how they are processed.  In particular: prior to names and types are resolved.  They *aren't* items and aren't in the same namespace as anything else.  List major limitations.
-
 As previously mentioned, macro processing in Rust happens *after* the construction of the AST.  As such, the syntax used to invoke a macro *must* be a proper part of the language's syntax.  In fact, there are several "syntax extension" forms which are part of Rust's syntax.  Specifically, the following forms (by way of examples):
 
 * `# [ $arg ]`; *e.g.* `#[derive(Clone)]`, `#[no_mangle]`, …
@@ -125,11 +117,11 @@ As previously mentioned, macro processing in Rust happens *after* the constructi
 
 The first two are "attributes", and are shared between both language-specific constructs (such as `#[repr(C)]` which is used to request a C-compatible ABI for user-defined types) and syntax extensions (such as `#[derive(Clone)]`).  There is currently no way to define a macro that uses these forms.
 
-The third is the one of interest to us: it is the form available for use with macros.  It is *also* used by various syntax extensions and compiler plugins.  For example, whilst `format!` is a macro, `format_args!` (which is used to *implement* `format!`) is *not*.
+The third is the one of interest to us: it is the form available for use with macros.  Note that this form is not *limited* to macros: it is a generic syntax extension form.  For example, whilst `format!` is a macro, `format_args!` (which is used to *implement* `format!`) is *not*.
 
 The fourth is essentially a variation which is *not* available to macros.  In fact, the only case where this form is used *at all* is with `macro_rules!` which, again we will come back to.
 
-Disregarding all but the third form (`$name ! $arg`), the question becomes: how does the Rust parser know what `$arg` looks like for every possible macro?  The answer is that it doesn't *have to*.  Instead, the argument of a macro invocation is a *single* token tree.  More specifically, it is a single, *non-leaf* token tree; `(...)`, `[...]`, or `{...}`.  With that knowledge, it should become apparent how the parser can understand all of the following invocation forms:
+Disregarding all but the third form (`$name ! $arg`), the question becomes: how does the Rust parser know what `$arg` looks like for every possible syntax extension?  The answer is that it doesn't *have to*.  Instead, the argument of a syntax extension invocation is a *single* token tree.  More specifically, it is a single, *non-leaf* token tree; `(...)`, `[...]`, or `{...}`.  With that knowledge, it should become apparent how the parser can understand all of the following invocation forms:
 
 ```ignore
 bitflags! {
@@ -161,7 +153,7 @@ fn main() {
 }
 ```
 
-Although the above macro invocations may *look* like they contain various kinds of Rust code, the parser simply sees a collection of meaningless token trees.  To make this clearer, we can replace all these syntactic "black boxes" with ⬚, leaving us with:
+Although the above invocations may *look* like they contain various kinds of Rust code, the parser simply sees a collection of meaningless token trees.  To make this clearer, we can replace all these syntactic "black boxes" with ⬚, leaving us with:
 
 ```text
 bitflags! ⬚
@@ -181,7 +173,11 @@ The important takeaways are:
 * There are multiple kinds of syntax extension in Rust.  We will *only* be talking about macros defined by the `macro_rules!` construct.
 * Just because you see something of the form `$name! $arg`, doesn't mean it's actually a macro; it might be another kind of syntax extension.
 * The input to every macro is a single non-leaf token tree.
-* Macros are parsed as *part* of the abstract syntax tree.
+* Macros (really, syntax extensions in general) are parsed as *part* of the abstract syntax tree.
+
+> **Aside**: due to the first point, some of what will be said below (including the next paragraph) will apply to syntax extensions *in general*.[^writer-is-lazy]
+
+[^writer-is-lazy]: This is rather convenient as "macro" is much quicker and easier to type than "syntax extension".
 
 The last point is the most important, as it has *significant* implications.  Because macros are parsed into the AST, they can **only** appear in positions where they are explicitly supported.  Specifically macros can appear in place of the following:
 
@@ -202,13 +198,11 @@ There is absolutely, definitely *no way* to use macros in any position *not* on 
 
 ## Expansion
 
-> **TODO**: Macros are expanded from the outside in.  The expansion can contain macro invocations, and will be forced into one a limited set of syntax elements.  Note the recursion limit and that it can be raised.
-
 Expansion is a relatively simple affair.  At some point *after* the construction of the AST, but before the compiler begins constructing its semantic understanding of the program, it will expand all macros.
 
-This involves traversing the AST, locating macro invocations and replacing them with their expansion.  In the case of non-macro syntax extensions, *how* this happens is undefined.  That said, syntax extensions go through *exactly* the same process that macros do once their expansion is complete.
+This involves traversing the AST, locating macro invocations and replacing them with their expansion.  In the case of non-macro syntax extensions, *how* this happens is up to the particular syntax extension.  That said, syntax extensions go through *exactly* the same process that macros do once their expansion is complete.
 
-Once the compiler has run a syntax extension, it expects an opaque object as a result.  The compiler will convert this object into one of a limited set of syntax elements, based on context.  For example, if you invoke a macro at module scope, the compiler will demand the result turn itself into an AST node that represents an item.  If you invoke a macro in expression position, the compiler will demand the result turn itself into an expression AST node.
+Once the compiler has run a syntax extension, it expects the result to be parseable as one of a limited set of syntax elements, based on context.  For example, if you invoke a macro at module scope, the compiler will parse the result into an AST node that represents an item.  If you invoke a macro in expression position, the compiler will parse the result into an expression AST node.
 
 In fact, it can turn a syntax extension result into any of the following:
 
@@ -276,7 +270,7 @@ It is important to understand that macro expansions are treated as AST nodes, as
 * In addition to there being a limited number of invocation *positions*, macros can *only* expand to the kind of AST node the parser *expects* at that position.
 * As a consequence of the above, macros *absolutely cannot* expand to incomplete or syntactically invalid constructs.
 
-There are two further things to note about expansion.  The first is what happens when a syntax extension expands to something that contains *another* syntax extension invocation.  For example, consider an alternative definition of `four!`; what happens if it expands to `1 + three!()`?
+There is one further thing to note about expansion: what happens when a syntax extension expands to something that contains *another* syntax extension invocation.  For example, consider an alternative definition of `four!`; what happens if it expands to `1 + three!()`?
 
 ```ignore
 let x = four!();
@@ -302,8 +296,6 @@ This limit can be raised using the `#![recursion_limit="…"]` attribute, though
 
 # Macro-by-example
 
-> **TODO**: Introduce `macro_rules!` and the basic syntax.  Perhaps also a reminder that recursion is handled *after* expansion, not *during*.
-
 With all that in mind, we can introduce `macro_rules!` itself.  As noted previously, `macro_rules!` is *itself* a syntax extension, meaning it is *technically* not part of the Rust syntax.  It uses the following form:
 
 ```ignore
@@ -317,7 +309,7 @@ macro_rules! $name {
 
 There must be *at least* one rule, and you can omit the semicolon after the last rule.
 
-Where each "`rule`" looks like so:
+Each "`rule`" looks like so:
 
 ```ignore
     ($pattern) => {$expansion}
@@ -328,8 +320,6 @@ Actually, the parens and braces can be any kind of group, but parens around the 
 If you are wondering, the `macro_rules!` invocation expands to... *nothing*.  At least, nothing that appears in the AST; rather, it manipulates compiler-internal structures to register the macro.  As such, you can *technically* use `macro_rules!` in any position where an empty expansion is valid.
 
 ## Matching
-
-> **TODO**: How MR handles an invocation.  First example should be literal token matching.
 
 When a macro is invoked, the `macro_rules!` interpreter goes through the rules one by one, in lexical order.  For each rule, it tries to match the contents of the input token tree against that rule's `pattern`.  A pattern must match the *entirety* of the input to be considered a match.
 
@@ -359,8 +349,6 @@ You can use any token tree that you can write.
 
 ## Captures
 
-> **TODO**: Second example: introduce straight captures and substitutions.  Full list of capture kinds.
-
 Patterns can also contain captures.  These allow input to be matched based on some general grammar category, with the result captured to a variable which can then be substituted into the output.
 
 Captures are written as a dollar (`$`) followed by an identifier, a colon (`:`), and finally the kind of capture, which must be one of the following:
@@ -375,8 +363,6 @@ Captures are written as a dollar (`$`) followed by an identifier, a colon (`:`),
 * `path`: a path (e.g. `foo`, `::std::mem::replace`, `transmute::<_, int>`, …)
 * `meta`: a meta item; the things that go inside `#[...]` and `#![...]` attributes
 * `tt`: a single token tree
-
-> **TODO**: Does `ident` prevent matching against literal idents?  Prove it.
 
 For example, here is a macro which captures its input as an expression:
 
@@ -400,11 +386,17 @@ macro_rules! times_five {
 
 Much like macro expansion, captures are substituted as complete AST nodes.  This means that no matter what sequence of tokens is captured by `$e`, it will be interpreted as a single, complete expression.
 
+You can also have multiple captures in a single pattern:
+
+```ignore
+macro_rules! multiply_add {
+    ($a:expr, $b:expr, $c:expr) => {$a * ($b + $c)};
+}
+```
+
 ## Repetitions
 
-> **TODO**: Third example: add repetitions with and without captures.  Note that repetitions must have a consistent "depth", and can't be mixed.
-
-Finally, patterns can contain repetitions.  These allow a sequence of tokens to be matched.  These have the general form `$ ( ... ) sep rep`.
+Patterns can contain repetitions.  These allow a sequence of tokens to be matched.  These have the general form `$ ( ... ) sep rep`.
 
 * `$` is a literal dollar token.
 * `( ... )` is the paren-grouped pattern being repeated.
@@ -453,11 +445,9 @@ macro_rules! vec_strs {
 # }
 ```
 
-# Details
+# Minutiae
 
 ## Captures and Expansion Redux
-
-> **TODO**: Captures are unabortable.
 
 Once the parser begins consuming tokens for a capture, *it cannot stop or backtrack*.  This means that the second rule of the following macro *cannot ever match*, no matter what input is provided:
 
@@ -470,11 +460,9 @@ macro_rules! dead_rule {
 
 Consider what happens if this macro is invoked as `dead_rule!(x+)`.  The interpreter will start at the first rule, and attempt to parse the input as an expression.  The first token (`x`) is valid as an expression.  The second token is *also* valid in an expression, forming a binary addition node.
 
-At this point, given that there is no left-hand side of the addition, you might expect the parser to give up and try the next rule.  Instead, the parser will panic and abort the entire compilation, citing a syntax error.
+At this point, given that there is no right-hand side of the addition, you might expect the parser to give up and try the next rule.  Instead, the parser will panic and abort the entire compilation, citing a syntax error.
 
 As such, it is important in general that you write macro rules from most-specific to least-specific.
-
-> **TODO**: Captures restrict what can come after (TY_FOLLOW).
 
 To defend against future syntax changes altering the interpretation of macro input, `macro_rules!` restricts what can follow various captures.  The complete list, as of Rust 1.3 is as follows:
 
@@ -491,8 +479,6 @@ To defend against future syntax changes altering the interpretation of macro inp
 
 Additionally, `macro_rules!` generally forbids a repetition to be followed by another repetition, even if the contents do not conflict.
 
-> **TODO**: Substitutions create NTs (except for TTs), which *cannot* be destructured afterwards.  Good example are meta items.
-
 One aspect of substitution that often surprises people is that substitution is *not* token-based, despite very much *looking* like it.  Here is a simple demonstration:
 
 ```rust
@@ -507,6 +493,8 @@ fn main() {
     println!("{:?}", capture_expr_then_stringify!(dummy(2 * (1 + (3)))));
 }
 ```
+
+Note that `stringify!` is a built-in syntax extension which simply takes all tokens it is given and concatenates them into one big string.
 
 The output when run is:
 
@@ -590,13 +578,42 @@ got something else
 
 By parsing the input into an AST node, the substituted result becomes *un-destructible*; *i.e.* you cannot examine the contents or match against it ever again.
 
-> **TODO**: Verify this is true *re.* `ident`.
+Here is *another* example which can be particularly confusing:
+
+```rust
+macro_rules! capture_then_what_is {
+    (#[$m:meta]) => {what_is!(#[$m])};
+}
+
+macro_rules! what_is {
+    (#[no_mangle]) => {"no_mangle attribute"};
+    (#[inline]) => {"inline attribute"};
+    ($($tts:tt)*) => {concat!("something else (", stringify!($($tts)*), ")")};
+}
+
+fn main() {
+    println!(
+        "{}\n{}\n{}\n{}",
+        what_is!(#[no_mangle]),
+        what_is!(#[inline]),
+        capture_then_what_is!(#[no_mangle]),
+        capture_then_what_is!(#[inline]),
+    );
+}
+```
+
+The output is:
+
+```text
+no_mangle attribute
+inline attribute
+something else (# [ no_mangle ])
+something else (# [ inline ])
+```
 
 The only way to avoid this is to capture using the `tt` or `ident` kinds.  Once you capture with anything else, the only thing you can do with the result from then on is substitute it directly into the output.
 
 ## Hygiene
-
-> **TODO**: Show syntax context colouring.
 
 Macros in Rust are *partially* hygienic.  Specifically, they are hygienic when it comes to most identifiers, but *not* when it comes to generic type parameters or lifetimes.
 
@@ -604,23 +621,11 @@ Hygiene works by attaching an invisible "syntax context" value to all identifier
 
 To illustrate this, consider the following code:
 
-<pre class="rust rust-example-rendered"><span class="synctx-0"><span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">using_a</span> {
-    (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">e</span>:<span class="ident">expr</span>) <span class="op">=&gt;</span> {
-        {
-            <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="number">42</span>;
-            <span class="macro-nonterminal">$</span><span class="macro-nonterminal">e</span>
-        }
-    }
-}
-
-<span class="kw">let</span> <span class="ident">four</span> <span class="op">=</span> <span class="macro">using_a</span><span class="macro">!</span>(<span class="ident">a</span> <span class="op">/</span> <span class="number">10</span>);</span></pre>
+<pre class="rust rust-example-rendered"><span class="synctx-0"><span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">using_a</span> {&#xa;    (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">e</span>:<span class="ident">expr</span>) <span class="op">=&gt;</span> {&#xa;        {&#xa;            <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="number">42</span>;&#xa;            <span class="macro-nonterminal">$</span><span class="macro-nonterminal">e</span>&#xa;        }&#xa;    }&#xa;}&#xa;&#xa;<span class="kw">let</span> <span class="ident">four</span> <span class="op">=</span> <span class="macro">using_a</span><span class="macro">!</span>(<span class="ident">a</span> <span class="op">/</span> <span class="number">10</span>);</span></pre>
 
 We will use the background colour to denote the syntax context.  Now, let's expand the macro invocation:
 
-<pre class="rust rust-example-rendered"><span class="synctx-0"><span class="kw">let</span> <span class="ident">four</span> <span class="op">=</span> </span><span class="synctx-1">{
-    <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="number">42</span>;
-    </span><span class="synctx-0"><span class="ident">a</span> <span class="op">/</span> <span class="number">10</span></span><span class="synctx-1">
-}</span><span class="synctx-0">;</span></pre>
+<pre class="rust rust-example-rendered"><span class="synctx-0"><span class="kw">let</span> <span class="ident">four</span> <span class="op">=</span> </span><span class="synctx-1">{&#xa;    <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="number">42</span>;&#xa;    </span><span class="synctx-0"><span class="ident">a</span> <span class="op">/</span> <span class="number">10</span></span><span class="synctx-1">&#xa;}</span><span class="synctx-0">;</span></pre>
 
 First, recall that `macro_rules!` invocations effectively *disappear* during expansion.
 
@@ -635,29 +640,188 @@ Note that the background colour (*i.e.* syntax context) for the expanded macro *
 
 That said, tokens that were substituted *into* the expanded output *retain* their original syntax context (by virtue of having been provided to the macro as opposed to being part of the macro itself).  Thus, the solution is to modify the macro as follows:
 
-<pre class="rust rust-example-rendered"><span class="synctx-0"><span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">using_a</span> {
-    (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">a</span>:<span class="ident">ident</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">e</span>:<span class="ident">expr</span>) <span class="op">=&gt;</span> {
-        {
-            <span class="kw">let</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">a</span> <span class="op">=</span> <span class="number">42</span>;
-            <span class="macro-nonterminal">$</span><span class="macro-nonterminal">e</span>
-        }
-    }
-}
-
-<span class="kw">let</span> <span class="ident">four</span> <span class="op">=</span> <span class="macro">using_a</span><span class="macro">!</span>(<span class="ident">a</span>, <span class="ident">a</span> <span class="op">/</span> <span class="number">10</span>);</span></pre>
+<pre class="rust rust-example-rendered"><span class="synctx-0"><span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">using_a</span> {&#xa;    (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">a</span>:<span class="ident">ident</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">e</span>:<span class="ident">expr</span>) <span class="op">=&gt;</span> {&#xa;        {&#xa;            <span class="kw">let</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">a</span> <span class="op">=</span> <span class="number">42</span>;&#xa;            <span class="macro-nonterminal">$</span><span class="macro-nonterminal">e</span>&#xa;        }&#xa;    }&#xa;}&#xa;&#xa;<span class="kw">let</span> <span class="ident">four</span> <span class="op">=</span> <span class="macro">using_a</span><span class="macro">!</span>(<span class="ident">a</span>, <span class="ident">a</span> <span class="op">/</span> <span class="number">10</span>);</span></pre>
 
 Which, upon expansion becomes:
 
-<pre class="rust rust-example-rendered"><span class="synctx-0"><span class="kw">let</span> <span class="ident">four</span> <span class="op">=</span> </span><span class="synctx-1">{
-    <span class="kw">let</span> </span><span class="synctx-0"><span class="ident">a</span></span><span class="synctx-1"> <span class="op">=</span> <span class="number">42</span>;
-    </span><span class="synctx-0"><span class="ident">a</span> <span class="op">/</span> <span class="number">10</span></span><span class="synctx-1">
-}</span><span class="synctx-0">;</span></pre>
+<pre class="rust rust-example-rendered"><span class="synctx-0"><span class="kw">let</span> <span class="ident">four</span> <span class="op">=</span> </span><span class="synctx-1">{&#xa;    <span class="kw">let</span> </span><span class="synctx-0"><span class="ident">a</span></span><span class="synctx-1"> <span class="op">=</span> <span class="number">42</span>;&#xa;    </span><span class="synctx-0"><span class="ident">a</span> <span class="op">/</span> <span class="number">10</span></span><span class="synctx-1">&#xa;}</span><span class="synctx-0">;</span></pre>
 
 The compiler will accept this code because there is only one `a` being used.
 
-## Debugging
+## Non-Identifier Identifiers
 
-> **TODO**: `trace_macros!`, `log_syntax!`, `--pretty expanded`, `--pretty expanded,hygiene`.
+There are two tokens which you are likely to run into eventually that *look* like identifiers, but aren't.  Except when they are.
+
+First is `self`.  This is *very definitely* a keyword.  However, it also happens to fit the definition of an identifier.  In regular Rust code, there's no way for `self` to be interpreted as an identifier, but it *can* happen with macros:
+
+```rust
+macro_rules! what_is {
+    (self) => {"the keyword `self`"};
+    ($i:ident) => {concat!("the identifier `", stringify!($i), "`")};
+}
+
+macro_rules! call_with_ident {
+    ($c:ident($i:ident)) => {$c!($i)};
+}
+
+fn main() {
+    println!("{}", what_is!(self));
+    println!("{}", call_with_ident!(what_is(self)));
+}
+```
+
+The above outputs:
+
+```text
+the keyword `self`
+the keyword `self`
+```
+
+But that makes no sense; `call_with_ident!` required an identifier, matched one, and substituted it!  So `self` is both a keyword and not a keyword at the same time.  You might wonder how this is in any way important.  Take this example:
+
+```ignore
+macro_rules! make_mutable {
+    ($i:ident) => {let mut $i = $i;};
+}
+
+struct Dummy(i32);
+
+impl Dummy {
+    fn double(self) -> Dummy {
+        make_mutable!(self);
+        self.0 *= 2;
+        self
+    }
+}
+# 
+# fn main() {
+#     println!("{:?}", Dummy(4).double().0);
+# }
+```
+
+This fails to compile with:
+
+```text
+<anon>:2:28: 2:30 error: expected identifier, found keyword `self`
+<anon>:2     ($i:ident) => {let mut $i = $i;};
+                                    ^~
+```
+
+So the macro will happily match `self` as an identifier, allowing you to use it in cases where you can't actually use it.  But, fine; it somehow remembers that `self` is a keyword even when it's an identifier, so you *should* be able to do this, right?
+
+```ignore
+macro_rules! make_self_mutable {
+    ($i:ident) => {let mut $i = self;};
+}
+
+struct Dummy(i32);
+
+impl Dummy {
+    fn double(self) -> Dummy {
+        make_self_mutable!(mut_self);
+        mut_self.0 *= 2;
+        mut_self
+    }
+}
+# 
+# fn main() {
+#     println!("{:?}", Dummy(4).double().0);
+# }
+```
+
+This fails with:
+
+```text
+<anon>:2:33: 2:37 error: `self` is not available in a static method. Maybe a `self` argument is missing? [E0424]
+<anon>:2     ($i:ident) => {let mut $i = self;};
+                                         ^~~~
+```
+
+*That* doesn't make any sense, either.  It's *not* in a static method.  It's almost like it's complaining that the `self` it's trying to use isn't the *same* `self`... as though the `self` keyword has hygiene, like an... identifier.
+
+```ignore
+macro_rules! double_method {
+    ($body:expr) => {
+        fn double(mut self) -> Dummy {
+            $body
+        }
+    };
+}
+
+struct Dummy(i32);
+
+impl Dummy {
+    double_method! {{
+        self.0 *= 2;
+        self
+    }}
+}
+# 
+# fn main() {
+#     println!("{:?}", Dummy(4).double().0);
+# }
+```
+
+Same error.  What about...
+
+```rust
+macro_rules! double_method {
+    ($self_:ident, $body:expr) => {
+        fn double(mut $self_) -> Dummy {
+            $body
+        }
+    };
+}
+
+struct Dummy(i32);
+
+impl Dummy {
+    double_method! {self, {
+        self.0 *= 2;
+        self
+    }}
+}
+# 
+# fn main() {
+#     println!("{:?}", Dummy(4).double().0);
+# }
+```
+
+At last, *this works*.  So `self` is both a keyword *and* an identifier when it feels like it.  Surely this works for other, similar constructs, right?
+
+```ignore
+macro_rules! double_method {
+    ($self_:ident, $body:expr) => {
+        fn double($self_) -> Dummy {
+            $body
+        }
+    };
+}
+
+struct Dummy(i32);
+
+impl Dummy {
+    double_method! {_, 0}
+}
+# 
+# fn main() {
+#     println!("{:?}", Dummy(4).double().0);
+# }
+```
+
+```text
+<anon>:12:21: 12:22 error: expected ident, found _
+<anon>:12     double_method! {_, 0}
+                              ^
+```
+
+No, of course not.  `_` is a keyword that is valid in patterns and expressions, but somehow *isn't* an identifier like the keyword `self` is, despite matching the definition of an identifier just the same.
+
+You might think you can get around this by using `$self_:pat` instead; that way, `_` will match!  Except, no, because `self` isn't a pattern.  Joy.
+
+The only work around for this (in cases where you want to accept some combination of these tokens) is to use a `tt` matcher instead.
+
+## Debugging
 
 `rustc` provides a number of tools to debug macros.  One of the most useful is `trace_macros!`, which is a directive to the compiler instructing it to dump every macro invocation prior to expansion.  For example, given the following:
 
@@ -689,9 +853,9 @@ each_tt! { whum }
 each_tt! {  }
 ```
 
-This is *particularly* invaluable when debugging deeply recursive macros.
+This is *particularly* invaluable when debugging deeply recursive macros.  You can also enable this from the command-line by adding `-Z trace-macros` to the compiler command line.
 
-Secondly, there is `log_syntax!` which causes the compiler to output all tokens passed to it.  For example, this example makes the compiler sing a song:
+Secondly, there is `log_syntax!` which causes the compiler to output all tokens passed to it.  For example, this makes the compiler sing a song:
 
 ```rust
 # // Note: make sure to use a nightly channel compiler.
@@ -766,8 +930,6 @@ fn main() {
 Other options to `--pretty` can be listed using `rustc -Z unstable-options --help -v`; a full list is not provided since, as implied by the name, any such list would be subject to change at any time.
 
 ## Scoping
-
-> **TODO**: scoping in modules, functions.
 
 The way in which macros are scoped can be somewhat unintuitive.  Firstly, unlike everything else in the languages, macros will remain visible in sub-modules.
 
@@ -922,8 +1084,6 @@ These scoping rules are why a common piece of advice is to place all macros whic
 
 ## Import/Export
 
-> **TODO**: `macro_use`, `macro_export`.
-
 There are two ways to expose a macro to a wider scope.  The first is the `#[macro_use]` attribute.  This can be applied to *either* modules or external crates.  For example:
 
 ```rust
@@ -978,8 +1138,6 @@ X!(); // X is defined, and so is Y!
 
 fn main() {}
 ```
-
-> **TODO**: `$crate`.
 
 When exporting macros, it is often useful to refer to non-macro symbols in the defining crate.  Because crates can be renamed, there is a special substitution variable available: `$crate`.  This will *always* expand to an absolute path prefix to the containing crate (*e.g.* `:: macs`).
 
