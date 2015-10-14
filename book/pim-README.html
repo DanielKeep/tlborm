@@ -1,0 +1,2229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <title>Macros, A Practical Introduction</title>
+
+    <link rel="stylesheet" type="text/css" href="rust-book.css">
+
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    <div id="nav">
+                <button id="toggle-nav">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                </button>
+              </div>
+<div id='toc' class='mobile-hidden'>
+<ul class='chapter'>
+<li><a  href='README.html'><b>1.</b> Introduction</a>
+</li>
+<li><a  href='mbe-README.html'><b>2.</b> Macros, A Methodical Introduction</a>
+<ul class='section'>
+<li><a  href='mbe-syn-README.html'><b>2.1.</b> Syntax Extensions</a>
+<ul class='section'>
+<li><a  href='mbe-syn-source-analysis.html'><b>2.1.1.</b> Source Analysis</a>
+</li>
+<li><a  href='mbe-syn-macros-in-the-ast.html'><b>2.1.2.</b> Macros in the AST</a>
+</li>
+<li><a  href='mbe-syn-expansion.html'><b>2.1.3.</b> Expansion</a>
+</li>
+</ul>
+</li>
+<li><a  href='mbe-macro-rules.html'><b>2.2.</b> macro_rules!</a>
+</li>
+<li><a  href='mbe-min-README.html'><b>2.3.</b> Minutiae</a>
+<ul class='section'>
+<li><a  href='mbe-min-captures-and-expansion-redux.html'><b>2.3.1.</b> Captures and Expansion Redux</a>
+</li>
+<li><a  href='mbe-min-hygiene.html'><b>2.3.2.</b> Hygiene</a>
+</li>
+<li><a  href='mbe-min-non-identifier-identifiers.html'><b>2.3.3.</b> Non-Identifier Identifiers</a>
+</li>
+<li><a  href='mbe-min-debugging.html'><b>2.3.4.</b> Debugging</a>
+</li>
+<li><a  href='mbe-min-scoping.html'><b>2.3.5.</b> Scoping</a>
+</li>
+<li><a  href='mbe-min-import-export.html'><b>2.3.6.</b> Import/Export</a>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class='active' href='pim-README.html'><b>3.</b> Macros, A Practical Introduction</a>
+</li>
+<li><a  href='pat-README.html'><b>4.</b> Patterns</a>
+<ul class='section'>
+<li><a  href='pat-callbacks.html'><b>4.1.</b> Callbacks</a>
+</li>
+<li><a  href='pat-incremental-tt-munchers.html'><b>4.2.</b> Incremental TT Munchers</a>
+</li>
+<li><a  href='pat-internal-rules.html'><b>4.3.</b> Internal Rules</a>
+</li>
+<li><a  href='pat-push-down-accumulation.html'><b>4.4.</b> Push-Down Accumulation</a>
+</li>
+<li><a  href='pat-repetition-replacement.html'><b>4.5.</b> Repetition Replacement</a>
+</li>
+<li><a  href='pat-trailing-separators.html'><b>4.6.</b> Trailing Separators</a>
+</li>
+<li><a  href='pat-tt-bundling.html'><b>4.7.</b> TT Bundling</a>
+</li>
+<li><a  href='pat-provisional.html'><b>4.8.</b> Provisional</a>
+</li>
+</ul>
+</li>
+<li><a  href='blk-README.html'><b>5.</b> Building Blocks</a>
+<ul class='section'>
+<li><a  href='blk-ast-coercion.html'><b>5.1.</b> AST Coercion</a>
+</li>
+<li><a  href='blk-counting.html'><b>5.2.</b> Counting</a>
+</li>
+<li><a  href='blk-enum-parsing.html'><b>5.3.</b> Enum Parsing</a>
+</li>
+</ul>
+</li>
+<li><a  href='aeg-README.html'><b>6.</b> Annotated Examples</a>
+<ul class='section'>
+<li><a  href='aeg-ook.html'><b>6.1.</b> Ook!</a>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<div id='page-wrapper'>
+<div id='page'>
+
+
+    <h1 class="title">Macros, A Practical Introduction</h1>
+    <p>This chapter will introduce the Rust macro-by-example system using a relatively simple, practical example.  It does <em>not</em> attempt to explain all of the intricacies of the system; its goal is to get you comfortable with how and why macros are written.</p>
+
+<p>There is also the <a href="http://doc.rust-lang.org/book/macros.html">Macros chapter of the Rust Book</a> which is another high-level explanation, and the <a href="mbe-README.html">methodical introduction</a> chapter of this book, which explains the macro system in detail.</p>
+
+<h2 id="a-little-context" class='section-header'><a
+                           href="#a-little-context">A Little Context</a></h2>
+<blockquote>
+<p><strong>Note</strong>: don&#39;t panic!  What follows is the only math will be talked about.  You can quite safely skip this section if you just want to get to the meat of the article.</p>
+</blockquote>
+
+<p>If you aren&#39;t familiar, a recurrence relation is a sequence where each value is defined in terms of one or more <em>previous</em> values, with one or more initial values to get the whole thing started.  For example, the <a href="https://en.wikipedia.org/wiki/Fibonacci_number">Fibonacci sequence</a> can be defined by the relation:</p>
+
+<style type="text/css">
+    .katex {
+        font: 400 1.21em/1.2 KaTeX_Main;
+        white-space: nowrap;
+        font-family: "Cambria Math", "Cambria", serif;
+    }
+
+    .katex .vlist > span > {
+        display: inline-block;
+    }
+
+    .mathit {
+        font-style: italic;
+    }
+
+    .katex .reset-textstyle.scriptstyle {
+        font-size: 0.7em;
+    }
+
+    .katex .reset-textstyle.textstyle {
+        font-size: 1em;
+    }
+
+    .katex .textstyle > .mord + .mrel {
+        margin-left: 0.27778em;
+    }
+
+    .katex .textstyle > .mrel + .minner, .katex .textstyle > .mrel + .mop, .katex .textstyle > .mrel + .mopen, .katex .textstyle > .mrel + .mord {
+        margin-left: 0.27778em;
+    }
+
+    .katex .textstyle > .mclose + .minner, .katex .textstyle > .minner + .mop, .katex .textstyle > .minner + .mord, .katex .textstyle > .mpunct + .mclose, .katex .textstyle > .mpunct + .minner, .katex .textstyle > .mpunct + .mop, .katex .textstyle > .mpunct + .mopen, .katex .textstyle > .mpunct + .mord, .katex .textstyle > .mpunct + .mpunct, .katex .textstyle > .mpunct + .mrel {
+        margin-left: 0.16667em;
+    }
+
+    .katex .textstyle > .mord + .mbin {
+        margin-left: 0.22222em;
+    }
+
+    .katex .textstyle > .mbin + .minner, .katex .textstyle > .mbin + .mop, .katex .textstyle > .mbin + .mopen, .katex .textstyle > .mbin + .mord {
+        margin-left: 0.22222em;
+    }
+</style>
+
+<div class="katex" style="font-size: 100%; text-align: center;">
+    <span class="katex"><span class="katex-inner"><span style="height: 0.68333em;" class="strut"></span><span style="height: 0.891661em; vertical-align: -0.208331em;" class="strut bottom"></span><span class="base textstyle uncramped"><span class="reset-textstyle displaystyle textstyle uncramped"><span class="mord displaystyle textstyle uncramped"><span class="mord"><span class="mord mathit" style="margin-right: 0.13889em;">F</span><span class="vlist"><span style="top: 0.15em; margin-right: 0.05em; margin-left: -0.13889em;" class=""><span class="fontsize-ensurer reset-size5 size5"><span style="font-size: 0em;" class="">​</span></span><span class="reset-textstyle scriptstyle cramped"><span class="mord mathit">n</span></span></span><span class="baseline-fix"><span class="fontsize-ensurer reset-size5 size5"><span style="font-size: 0em;" class="">​</span></span>​</span></span></span><span class="mrel">=</span><span class="mord">0</span><span class="mpunct">,</span><span class="mord">1</span><span class="mpunct">,</span><span class="mpunct">…</span><span class="mpunct">,</span><span class="mord"><span class="mord mathit" style="margin-right: 0.13889em;">F</span><span class="vlist"><span style="top: 0.15em; margin-right: 0.05em; margin-left: -0.13889em;" class=""><span class="fontsize-ensurer reset-size5 size5"><span style="font-size: 0em;" class="">​</span></span><span class="reset-textstyle scriptstyle cramped"><span class="mord scriptstyle cramped"><span class="mord mathit">n</span><span class="mbin">−</span><span class="mord">1</span></span></span></span><span class="baseline-fix"><span class="fontsize-ensurer reset-size5 size5"><span style="font-size: 0em;" class="">​</span></span>​</span></span></span><span class="mbin">+</span><span class="mord"><span class="mord mathit" style="margin-right: 0.13889em;">F</span><span class="vlist"><span style="top: 0.15em; margin-right: 0.05em; margin-left: -0.13889em;" class=""><span class="fontsize-ensurer reset-size5 size5"><span style="font-size: 0em;" class="">​</span></span><span class="reset-textstyle scriptstyle cramped"><span class="mord scriptstyle cramped"><span class="mord mathit">n</span><span class="mbin">-</span><span class="mord">2</span></span></span></span><span class="baseline-fix"><span class="fontsize-ensurer reset-size5 size5"><span style="font-size: 0em;" class="">​</span></span>​</span></span></span></span></span></span></span></span>
+</div>
+
+<p>Thus, the first two numbers in the sequence are 0 and 1, with the third being <em>F<sub>0</sub></em> + <em>F<sub>1</sub></em> = 0 + 1 = 1, the fourth <em>F<sub>1</sub></em> + <em>F<sub>2</sub></em> = 1 + 1 = 2, and so on forever.</p>
+
+<p>Now, <em>because</em> such a sequence can go on forever, that makes defining a <code>fibonacci</code> function a little tricky, since you obviously don&#39;t want to try returning a complete vector.  What you <em>want</em> is to return something which will lazily compute elements of the sequence as needed.</p>
+
+<p>In Rust, that means producing an <code>Iterator</code>.  This is not especially <em>hard</em>, but there is a fair amount of boilerplate involved: you need to define a custom type, work out what state needs to be stored in it, then implement the <code>Iterator</code> trait for it.</p>
+
+<p>However, recurrence relations are simple enough that almost all of these details can be abstracted out with a little macro-based code generation.</p>
+
+<p>So, with all that having been said, let&#39;s get started.</p>
+
+<h2 id="construction" class='section-header'><a
+                           href="#construction">Construction</a></h2>
+<p>Usually, when working on a new macro, the first thing I do is decide what the macro invocation should look like.  In this specific case, my first attempt looked like this:</p>
+<span class='rusttest'>fn main() {
+    let fib = recurrence![a[n] = 0, 1, ..., a[n-1] + a[n-2]];
+    
+    for e in fib.take(10) { println!(&quot;{}&quot;, e) }
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='kw'>let</span> <span class='ident'>fib</span> <span class='op'>=</span> <span class='macro'>recurrence</span><span class='macro'>!</span>[<span class='ident'>a</span>[<span class='ident'>n</span>] <span class='op'>=</span> <span class='number'>0</span>, <span class='number'>1</span>, ..., <span class='ident'>a</span>[<span class='ident'>n</span><span class='op'>-</span><span class='number'>1</span>] <span class='op'>+</span> <span class='ident'>a</span>[<span class='ident'>n</span><span class='op'>-</span><span class='number'>2</span>]];
+
+<span class='kw'>for</span> <span class='ident'>e</span> <span class='kw'>in</span> <span class='ident'>fib</span>.<span class='ident'>take</span>(<span class='number'>10</span>) { <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;{}&quot;</span>, <span class='ident'>e</span>) }</pre>
+
+<p>From that, we can take a stab at how the macro should be defined, even if we aren&#39;t sure of the actual expansion.  This is useful because if you can&#39;t figure out how to parse the input syntax, then <em>maybe</em> you need to change it.</p>
+<span class='rusttest'>macro_rules! recurrence {
+    ( a[n] = $($inits:expr),+ , ... , $recur:expr ) =&gt; { /* ... */ };
+}
+fn main() {}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>recurrence</span> {
+    ( <span class='ident'>a</span>[<span class='ident'>n</span>] <span class='op'>=</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>inits</span>:<span class='ident'>expr</span>),<span class='op'>+</span> , ... , <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>recur</span>:<span class='ident'>expr</span> ) <span class='op'>=&gt;</span> { <span class='comment'>/* ... */</span> };
+}</pre>
+
+<p>Assuming you aren&#39;t familiar with the syntax, allow me to elucidate.  This is defining a macro, using the <code>macro_rules!</code> system, called <code>recurrence!</code>.  This macro has a single parsing rule.  That rule says the input to the macro must match:</p>
+
+<ul>
+<li>the literal token sequence <code>a</code> <code>[</code> <code>n</code> <code>]</code> <code>=</code>,</li>
+<li>a repeating (the <code>$( ... )</code>) sequence, using <code>,</code> as a separator, and one or more (<code>+</code>) repeats of:
+
+<ul>
+<li>a valid <em>expression</em> captured into the variable <code>inits</code> (<code>$inits:expr</code>)</li>
+</ul></li>
+<li>the literal token sequence <code>,</code> <code>...</code> <code>,</code>,</li>
+<li>a valid <em>expression</em> captured into the variable <code>recur</code> (<code>$recur:expr</code>).</li>
+</ul>
+
+<p>Finally, the rule says that <em>if</em> the input matches this rule, then the macro invocation should be replaced by the token sequence <code>/* ... */</code>.</p>
+
+<p>It&#39;s worth noting that <code>inits</code>, as implied by the name, actually contains <em>all</em> the expressions that match in this position, not just the first or last.  What&#39;s more, it captures them <em>as a sequence</em> as opposed to, say, irreversibly pasting them all together.  Also note that you can do &quot;zero or more&quot; with a repetition by using <code>*</code> instead of <code>+</code>.  There is no support for &quot;zero or one&quot; or more specific numbers of repetitions.</p>
+
+<p>As an exercise, let&#39;s take the proposed input and feed it through the rule, to see how it is processed.  The &quot;Position&quot; column will show which part of the syntax pattern needs to be matched against next, denoted by a &quot;⌂&quot;.  Note that in some cases, there might be more than one possible &quot;next&quot; element to match against.  &quot;Input&quot; will contain all of the tokens that have <em>not</em> been consumed yet.  <code>inits</code> and <code>recur</code> will contain the contents of those bindings.</p>
+
+<style type="text/css">
+    /* Customisations. */
+
+    .small-code code {
+        font-size: 60%;
+    }
+
+    table pre.rust {
+        margin: 0;
+        border: 0;
+    }
+
+    table.parse-table code {
+        white-space: pre-wrap;
+        background-color: transparent;
+        border: none;
+    }
+
+    table.parse-table tbody > tr > td:nth-child(1) > code:nth-of-type(2) {
+        color: red;
+        margin-top: -0.7em;
+        margin-bottom: -0.6em;
+    }
+
+    table.parse-table tbody > tr > td:nth-child(1) > code {
+        display: block;
+    }
+
+    table.parse-table tbody > tr > td:nth-child(2) > code {
+        display: block;
+    }
+</style>
+
+<table class="parse-table">
+    <thead>
+        <tr>
+            <th>Position</th>
+            <th>Input</th>
+            <th><code>inits</code></th>
+            <th><code>recur</code></th>
+        </tr>
+    </thead>
+    <tbody class="small-code">
+        <tr>
+            <td><code>a[n] = $($inits:expr),+ , ... , $recur:expr</code>
+                <code>⌂</code></td>
+            <td><code>a[n] = 0, 1, ..., a[n-1] + a[n-2]</code></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td><code>a[n] = $($inits:expr),+ , ... , $recur:expr</code>
+                <code> ⌂</code></td>
+            <td><code>[n] = 0, 1, ..., a[n-1] + a[n-2]</code></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td><code>a[n] = $($inits:expr),+ , ... , $recur:expr</code>
+                <code>  ⌂</code></td>
+            <td><code>n] = 0, 1, ..., a[n-1] + a[n-2]</code></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td><code>a[n] = $($inits:expr),+ , ... , $recur:expr</code>
+                <code>   ⌂</code></td>
+            <td><code>] = 0, 1, ..., a[n-1] + a[n-2]</code></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td><code>a[n] = $($inits:expr),+ , ... , $recur:expr</code>
+                <code>     ⌂</code></td>
+            <td><code>= 0, 1, ..., a[n-1] + a[n-2]</code></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td><code>a[n] = $($inits:expr),+ , ... , $recur:expr</code>
+                <code>       ⌂</code></td>
+            <td><code>0, 1, ..., a[n-1] + a[n-2]</code></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td><code>a[n] = $($inits:expr),+ , ... , $recur:expr</code>
+                <code>         ⌂</code></td>
+            <td><code>0, 1, ..., a[n-1] + a[n-2]</code></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td><code>a[n] = $($inits:expr),+ , ... , $recur:expr</code>
+                <code>                     ⌂  ⌂</code></td>
+            <td><code>, 1, ..., a[n-1] + a[n-2]</code></td>
+            <td><code>0</code></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td colspan="4" style="font-size:.7em;">
+
+<em>Note</em>: there are two ⌂ here, because the next input token might match <em>either</em> the comma separator <em>between</em>em> elements in the repetition, <em>or</em> the comma <em>after</em> the repetition.  The macro system will keep track of both possibilities, until it is able to decide which one to follow.
+
+            </td>
+        </tr>
+        <tr>
+            <td><code>a[n] = $($inits:expr),+ , ... , $recur:expr</code>
+                <code>         ⌂                ⌂</code></td>
+            <td><code>1, ..., a[n-1] + a[n-2]</code></td>
+            <td><code>0</code></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td><code>a[n] = $($inits:expr),+ , ... , $recur:expr</code>
+                <code>                     ⌂  ⌂ <s>⌂</s></code></td>
+            <td><code>, ..., a[n-1] + a[n-2]</code></td>
+            <td><code>0</code>, <code>1</code></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td colspan="4" style="font-size:.7em;">
+
+<em>Note</em>: the third, crossed-out marker indicates that the macro system has, as a consequence of the last token consumed, eliminated one of the previous possible branches.
+
+            </td>
+        </tr>
+        <tr>
+            <td><code>a[n] = $($inits:expr),+ , ... , $recur:expr</code>
+                <code>         ⌂                ⌂</code></td>
+            <td><code>..., a[n-1] + a[n-2]</code></td>
+            <td><code>0</code>, <code>1</code></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td><code>a[n] = $($inits:expr),+ , ... , $recur:expr</code>
+                <code>         <s>⌂</s>                    ⌂</code></td>
+            <td><code>, a[n-1] + a[n-2]</code></td>
+            <td><code>0</code>, <code>1</code></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td><code>a[n] = $($inits:expr),+ , ... , $recur:expr</code>
+                <code>                                ⌂</code></td>
+            <td><code>a[n-1] + a[n-2]</code></td>
+            <td><code>0</code>, <code>1</code></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td><code>a[n] = $($inits:expr),+ , ... , $recur:expr</code>
+                <code>                                           ⌂</code></td>
+            <td></td>
+            <td><code>0</code>, <code>1</code></td>
+            <td><code>a[n-1] + a[n-2]</code></td>
+        </tr>
+        <tr>
+            <td colspan="4" style="font-size:.7em;">
+
+<em>Note</em>: this particular step should make it clear that a binding like <tt>$recur:expr</tt> will consume an <em>entire expression</em>, using the compiler's knowledge of what constitutes a valid expression.  As will be noted later, you can do this for other language constructs, too.
+
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+<p></p>
+
+<p>The key take-away from this is that the macro system will <em>try</em> to incrementally match the tokens provided as input to the macro against the provided rules.  We&#39;ll come back to the &quot;try&quot; part.</p>
+
+<p>Now, let&#39;s begin writing the final, fully expanded form.  For this expansion, I was looking for something like:</p>
+<span class='rusttest'>fn main() {
+    let fib = {
+        struct Recurrence {
+            mem: [u64; 2],
+            pos: usize,
+        }
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='kw'>let</span> <span class='ident'>fib</span> <span class='op'>=</span> {
+    <span class='kw'>struct</span> <span class='ident'>Recurrence</span> {
+        <span class='ident'>mem</span>: [<span class='ident'>u64</span>; <span class='number'>2</span>],
+        <span class='ident'>pos</span>: <span class='ident'>usize</span>,
+    }</pre>
+
+<p>This will be the actual iterator type.  <code>mem</code> will be the memo buffer to hold the last few values so the recurrence can be computed.  <code>pos</code> is to keep track of the value of <code>n</code>.</p>
+
+<blockquote>
+<p><strong>Aside</strong>: I&#39;ve chosen <code>u64</code> as a &quot;sufficiently large&quot; type for the elements of this sequence.  Don&#39;t worry about how this will work out for <em>other</em> sequences; we&#39;ll come to it.</p>
+</blockquote>
+<span class='rusttest'>fn main() {
+        impl Iterator for Recurrence {
+            type Item = u64;
+    
+            #[inline]
+            fn next(&amp;mut self) -&gt; Option&lt;u64&gt; {
+                if self.pos &lt; 2 {
+                    let next_val = self.mem[self.pos];
+                    self.pos += 1;
+                    Some(next_val)
+    
+}</span><pre class='rust rust-example-rendered'>
+    <span class='kw'>impl</span> <span class='ident'>Iterator</span> <span class='kw'>for</span> <span class='ident'>Recurrence</span> {
+        <span class='kw'>type</span> <span class='ident'>Item</span> <span class='op'>=</span> <span class='ident'>u64</span>;
+
+        <span class='attribute'>#[<span class='ident'>inline</span>]</span>
+        <span class='kw'>fn</span> <span class='ident'>next</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>u64</span><span class='op'>&gt;</span> {
+            <span class='kw'>if</span> <span class='self'>self</span>.<span class='ident'>pos</span> <span class='op'>&lt;</span> <span class='number'>2</span> {
+                <span class='kw'>let</span> <span class='ident'>next_val</span> <span class='op'>=</span> <span class='self'>self</span>.<span class='ident'>mem</span>[<span class='self'>self</span>.<span class='ident'>pos</span>];
+                <span class='self'>self</span>.<span class='ident'>pos</span> <span class='op'>+=</span> <span class='number'>1</span>;
+                <span class='prelude-val'>Some</span>(<span class='ident'>next_val</span>)</pre>
+
+<p>We need a branch to yield the initial values of the sequence; nothing tricky.</p>
+<span class='rusttest'>fn main() {
+                } else {
+                    let a = /* something */;
+                    let n = self.pos;
+                    let next_val = (a[n-1] + a[n-2]);
+    
+                    self.mem.TODO_shuffle_down_and_append(next_val);
+    
+                    self.pos += 1;
+                    Some(next_val)
+                }
+            }
+        }
+    
+}</span><pre class='rust rust-example-rendered'>
+            } <span class='kw'>else</span> {
+                <span class='kw'>let</span> <span class='ident'>a</span> <span class='op'>=</span> <span class='comment'>/* something */</span>;
+                <span class='kw'>let</span> <span class='ident'>n</span> <span class='op'>=</span> <span class='self'>self</span>.<span class='ident'>pos</span>;
+                <span class='kw'>let</span> <span class='ident'>next_val</span> <span class='op'>=</span> (<span class='ident'>a</span>[<span class='ident'>n</span><span class='op'>-</span><span class='number'>1</span>] <span class='op'>+</span> <span class='ident'>a</span>[<span class='ident'>n</span><span class='op'>-</span><span class='number'>2</span>]);
+
+                <span class='self'>self</span>.<span class='ident'>mem</span>.<span class='ident'>TODO_shuffle_down_and_append</span>(<span class='ident'>next_val</span>);
+
+                <span class='self'>self</span>.<span class='ident'>pos</span> <span class='op'>+=</span> <span class='number'>1</span>;
+                <span class='prelude-val'>Some</span>(<span class='ident'>next_val</span>)
+            }
+        }
+    }</pre>
+
+<p>This is a bit harder; we&#39;ll come back and look at <em>how</em> exactly to define <code>a</code>.  Also, <code>TODO_shuffle_down_and_append</code> is another placeholder; I want something that places <code>next_val</code> on the end of the array, shuffling the rest down by one space, dropping the 0th element.</p>
+<span class='rusttest'>
+fn main() {
+        Recurrence { mem: [0, 1], pos: 0 }
+    };
+    
+    for e in fib.take(10) { println!(&quot;{}&quot;, e) }
+    
+}</span><pre class='rust rust-example-rendered'>
+
+    <span class='ident'>Recurrence</span> { <span class='ident'>mem</span>: [<span class='number'>0</span>, <span class='number'>1</span>], <span class='ident'>pos</span>: <span class='number'>0</span> }
+};
+
+<span class='kw'>for</span> <span class='ident'>e</span> <span class='kw'>in</span> <span class='ident'>fib</span>.<span class='ident'>take</span>(<span class='number'>10</span>) { <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;{}&quot;</span>, <span class='ident'>e</span>) }</pre>
+
+<p>Lastly, return an instance of our new structure, which can then be iterated over.  To summarise, the complete expansion is:</p>
+<span class='rusttest'>fn main() {
+    let fib = {
+        struct Recurrence {
+            mem: [u64; 2],
+            pos: usize,
+        }
+    
+        impl Iterator for Recurrence {
+            type Item = u64;
+    
+            #[inline]
+            fn next(&amp;mut self) -&gt; Option&lt;u64&gt; {
+                if self.pos &lt; 2 {
+                    let next_val = self.mem[self.pos];
+                    self.pos += 1;
+                    Some(next_val)
+                } else {
+                    let a = /* something */;
+                    let n = self.pos;
+                    let next_val = (a[n-1] + a[n-2]);
+    
+                    self.mem.TODO_shuffle_down_and_append(next_val.clone());
+    
+                    self.pos += 1;
+                    Some(next_val)
+                }
+            }
+        }
+    
+        Recurrence { mem: [0, 1], pos: 0 }
+    };
+    
+    for e in fib.take(10) { println!(&quot;{}&quot;, e) }
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='kw'>let</span> <span class='ident'>fib</span> <span class='op'>=</span> {
+    <span class='kw'>struct</span> <span class='ident'>Recurrence</span> {
+        <span class='ident'>mem</span>: [<span class='ident'>u64</span>; <span class='number'>2</span>],
+        <span class='ident'>pos</span>: <span class='ident'>usize</span>,
+    }
+
+    <span class='kw'>impl</span> <span class='ident'>Iterator</span> <span class='kw'>for</span> <span class='ident'>Recurrence</span> {
+        <span class='kw'>type</span> <span class='ident'>Item</span> <span class='op'>=</span> <span class='ident'>u64</span>;
+
+        <span class='attribute'>#[<span class='ident'>inline</span>]</span>
+        <span class='kw'>fn</span> <span class='ident'>next</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>u64</span><span class='op'>&gt;</span> {
+            <span class='kw'>if</span> <span class='self'>self</span>.<span class='ident'>pos</span> <span class='op'>&lt;</span> <span class='number'>2</span> {
+                <span class='kw'>let</span> <span class='ident'>next_val</span> <span class='op'>=</span> <span class='self'>self</span>.<span class='ident'>mem</span>[<span class='self'>self</span>.<span class='ident'>pos</span>];
+                <span class='self'>self</span>.<span class='ident'>pos</span> <span class='op'>+=</span> <span class='number'>1</span>;
+                <span class='prelude-val'>Some</span>(<span class='ident'>next_val</span>)
+            } <span class='kw'>else</span> {
+                <span class='kw'>let</span> <span class='ident'>a</span> <span class='op'>=</span> <span class='comment'>/* something */</span>;
+                <span class='kw'>let</span> <span class='ident'>n</span> <span class='op'>=</span> <span class='self'>self</span>.<span class='ident'>pos</span>;
+                <span class='kw'>let</span> <span class='ident'>next_val</span> <span class='op'>=</span> (<span class='ident'>a</span>[<span class='ident'>n</span><span class='op'>-</span><span class='number'>1</span>] <span class='op'>+</span> <span class='ident'>a</span>[<span class='ident'>n</span><span class='op'>-</span><span class='number'>2</span>]);
+
+                <span class='self'>self</span>.<span class='ident'>mem</span>.<span class='ident'>TODO_shuffle_down_and_append</span>(<span class='ident'>next_val</span>.<span class='ident'>clone</span>());
+
+                <span class='self'>self</span>.<span class='ident'>pos</span> <span class='op'>+=</span> <span class='number'>1</span>;
+                <span class='prelude-val'>Some</span>(<span class='ident'>next_val</span>)
+            }
+        }
+    }
+
+    <span class='ident'>Recurrence</span> { <span class='ident'>mem</span>: [<span class='number'>0</span>, <span class='number'>1</span>], <span class='ident'>pos</span>: <span class='number'>0</span> }
+};
+
+<span class='kw'>for</span> <span class='ident'>e</span> <span class='kw'>in</span> <span class='ident'>fib</span>.<span class='ident'>take</span>(<span class='number'>10</span>) { <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;{}&quot;</span>, <span class='ident'>e</span>) }</pre>
+
+<blockquote>
+<p><strong>Aside</strong>: Yes, this <em>does</em> mean we&#39;re defining a different <code>Recurrence</code> struct and its implementation for each macro invocation.  Most of this will optimise away in the final binary, with some judicious use of <code>#[inline]</code> attributes.</p>
+</blockquote>
+
+<p>It&#39;s also useful to check your expansion as you&#39;re writing it.  If you see anything in the expansion that needs to vary with the invocation, but <em>isn&#39;t</em> in the actual macro syntax, you should work out where to introduce it.  In this case, we&#39;ve added <code>u64</code>, but that&#39;s not neccesarily what the user wants, nor is it in the macro syntax.  So let&#39;s fix that.</p>
+<span class='rusttest'>macro_rules! recurrence {
+    ( a[n]: $sty:ty = $($inits:expr),+ , ... , $recur:expr ) =&gt; { /* ... */ };
+}
+
+/*
+let fib = recurrence![a[n]: u64 = 0, 1, ..., a[n-1] + a[n-2]];
+
+for e in fib.take(10) { println!(&quot;{}&quot;, e) }
+*/
+fn main() {}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>recurrence</span> {
+    ( <span class='ident'>a</span>[<span class='ident'>n</span>]: <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>sty</span>:<span class='ident'>ty</span> <span class='op'>=</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>inits</span>:<span class='ident'>expr</span>),<span class='op'>+</span> , ... , <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>recur</span>:<span class='ident'>expr</span> ) <span class='op'>=&gt;</span> { <span class='comment'>/* ... */</span> };
+}
+
+<span class='comment'>/*
+let fib = recurrence![a[n]: u64 = 0, 1, ..., a[n-1] + a[n-2]];
+
+for e in fib.take(10) { println!(&quot;{}&quot;, e) }
+*/</span></pre>
+
+<p>Here, I&#39;ve added a new capture: <code>sty</code> which should be a type.</p>
+
+<blockquote>
+<p><strong>Aside</strong>: if you&#39;re wondering, the bit after the colon in a capture can be one of several kinds of syntax matchers.  The most common ones are <code>item</code>, <code>expr</code>, and <code>ty</code>.  A complete explanation can be found in <a href="mbe-macro-rules.html#captures">Macros, A Methodical Introduction; <code>macro_rules!</code> (Captures)</a>.</p>
+
+<p>There&#39;s one other thing to be aware of: in the interests of future-proofing the language, the compiler restricts what tokens you&#39;re allowed to put <em>after</em> a matcher, depending on what kind it is.  Typically, this comes up when trying to match expressions or statements; those can <em>only</em> be followed by one of <code>=&gt;</code>, <code>,</code>, and <code>;</code>.</p>
+
+<p>A complete list can be found in <a href="mbe-min-captures-and-expansion-redux.html">Macros, A Methodical Introduction; Minutiae; Captures and Expansion Redux</a>.</p>
+</blockquote>
+
+<h2 id="indexing-and-shuffling" class='section-header'><a
+                           href="#indexing-and-shuffling">Indexing and Shuffling</a></h2>
+<p>I will skim a bit over this part, since it&#39;s effectively tangential to the macro stuff.  We want to make it so that the user can access previous values in the sequence by indexing <code>a</code>; we want it to act as a sliding window keeping the last few (in this case, 2) elements of the sequence.</p>
+
+<p>We can do this pretty easily with a wrapper type:</p>
+<span class='rusttest'>fn main() {
+    struct IndexOffset&lt;&#39;a&gt; {
+        slice: &amp;&#39;a [u64; 2],
+        offset: usize,
+    }
+    
+    impl&lt;&#39;a&gt; Index&lt;usize&gt; for IndexOffset&lt;&#39;a&gt; {
+        type Output = u64;
+    
+        #[inline(always)]
+        fn index&lt;&#39;b&gt;(&amp;&#39;b self, index: usize) -&gt; &amp;&#39;b u64 {
+            use std::num::Wrapping;
+    
+            let index = Wrapping(index);
+            let offset = Wrapping(self.offset);
+            let window = Wrapping(2);
+    
+            let real_index = index - offset + window;
+            &amp;self.slice[real_index.0]
+        }
+    }
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='kw'>struct</span> <span class='ident'>IndexOffset</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
+    <span class='ident'>slice</span>: <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;a</span> [<span class='ident'>u64</span>; <span class='number'>2</span>],
+    <span class='ident'>offset</span>: <span class='ident'>usize</span>,
+}
+
+<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>Index</span><span class='op'>&lt;</span><span class='ident'>usize</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>IndexOffset</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
+    <span class='kw'>type</span> <span class='ident'>Output</span> <span class='op'>=</span> <span class='ident'>u64</span>;
+
+    <span class='attribute'>#[<span class='ident'>inline</span>(<span class='ident'>always</span>)]</span>
+    <span class='kw'>fn</span> <span class='ident'>index</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='lifetime'>&#39;b</span> <span class='self'>self</span>, <span class='ident'>index</span>: <span class='ident'>usize</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;b</span> <span class='ident'>u64</span> {
+        <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>num</span>::<span class='ident'>Wrapping</span>;
+
+        <span class='kw'>let</span> <span class='ident'>index</span> <span class='op'>=</span> <span class='ident'>Wrapping</span>(<span class='ident'>index</span>);
+        <span class='kw'>let</span> <span class='ident'>offset</span> <span class='op'>=</span> <span class='ident'>Wrapping</span>(<span class='self'>self</span>.<span class='ident'>offset</span>);
+        <span class='kw'>let</span> <span class='ident'>window</span> <span class='op'>=</span> <span class='ident'>Wrapping</span>(<span class='number'>2</span>);
+
+        <span class='kw'>let</span> <span class='ident'>real_index</span> <span class='op'>=</span> <span class='ident'>index</span> <span class='op'>-</span> <span class='ident'>offset</span> <span class='op'>+</span> <span class='ident'>window</span>;
+        <span class='kw-2'>&amp;</span><span class='self'>self</span>.<span class='ident'>slice</span>[<span class='ident'>real_index</span>.<span class='number'>0</span>]
+    }
+}</pre>
+
+<blockquote>
+<p><strong>Aside</strong>: since lifetimes come up <em>a lot</em> with people new to Rust, a quick explanation: <code>&#39;a</code> and <code>&#39;b</code> are lifetime parameters that are used to track where a reference (<em>i.e.</em> a borrowed pointer to some data) is valid.  In this case, <code>IndexOffset</code> borrows a reference to our iterator&#39;s data, so it needs to keep track of how long it&#39;s allowed to hold that reference for, using <code>&#39;a</code>.</p>
+
+<p><code>&#39;b</code> is used because the <code>Index::index</code> function (which is how subscript syntax is actually implemented) is <em>also</em> parameterised on a lifetime, on account of returning a borrowed reference.  <code>&#39;a</code> and <code>&#39;b</code> are not necessarily the same thing in all cases.  The borrow checker will make sure that even though we don&#39;t explicitly relate <code>&#39;a</code> and <code>&#39;b</code> to one another, we don&#39;t accidentally violate memory safety.</p>
+</blockquote>
+
+<p>This changes the definition of <code>a</code> to:</p>
+<span class='rusttest'>fn main() {
+    let a = IndexOffset { slice: &amp;self.mem, offset: n };
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='kw'>let</span> <span class='ident'>a</span> <span class='op'>=</span> <span class='ident'>IndexOffset</span> { <span class='ident'>slice</span>: <span class='kw-2'>&amp;</span><span class='self'>self</span>.<span class='ident'>mem</span>, <span class='ident'>offset</span>: <span class='ident'>n</span> };</pre>
+
+<p>The only remaining question is what to do about <code>TODO_shuffle_down_and_append</code>.  I wasn&#39;t able to find a method in the standard library with exactly the semantics I wanted, but it isn&#39;t hard to do by hand.</p>
+<span class='rusttest'>fn main() {
+    {
+        use std::mem::swap;
+    
+        let mut swap_tmp = next_val;
+        for i in (0..2).rev() {
+            swap(&amp;mut swap_tmp, &amp;mut self.mem[i]);
+        }
+    }
+    
+}</span><pre class='rust rust-example-rendered'>
+{
+    <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>mem</span>::<span class='ident'>swap</span>;
+
+    <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>swap_tmp</span> <span class='op'>=</span> <span class='ident'>next_val</span>;
+    <span class='kw'>for</span> <span class='ident'>i</span> <span class='kw'>in</span> (<span class='number'>0</span>..<span class='number'>2</span>).<span class='ident'>rev</span>() {
+        <span class='ident'>swap</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>swap_tmp</span>, <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>.<span class='ident'>mem</span>[<span class='ident'>i</span>]);
+    }
+}</pre>
+
+<p>This swaps the new value into the end of the array, swapping the other elements down one space.</p>
+
+<blockquote>
+<p><strong>Aside</strong>: doing it this way means that this code will work for non-copyable types, as well.</p>
+</blockquote>
+
+<p>The working code thus far now looks like this:</p>
+<span class='rusttest'>macro_rules! recurrence {
+    ( a[n]: $sty:ty = $($inits:expr),+ , ... , $recur:expr ) =&gt; { /* ... */ };
+}
+
+fn main() {
+    /*
+    let fib = recurrence![a[n]: u64 = 0, 1, ..., a[n-1] + a[n-2]];
+
+    for e in fib.take(10) { println!(&quot;{}&quot;, e) }
+    */
+    let fib = {
+        use std::ops::Index;
+
+        struct Recurrence {
+            mem: [u64; 2],
+            pos: usize,
+        }
+
+        struct IndexOffset&lt;&#39;a&gt; {
+            slice: &amp;&#39;a [u64; 2],
+            offset: usize,
+        }
+
+        impl&lt;&#39;a&gt; Index&lt;usize&gt; for IndexOffset&lt;&#39;a&gt; {
+            type Output = u64;
+
+            #[inline(always)]
+            fn index&lt;&#39;b&gt;(&amp;&#39;b self, index: usize) -&gt; &amp;&#39;b u64 {
+                use std::num::Wrapping;
+
+                let index = Wrapping(index);
+                let offset = Wrapping(self.offset);
+                let window = Wrapping(2);
+
+                let real_index = index - offset + window;
+                &amp;self.slice[real_index.0]
+            }
+        }
+
+        impl Iterator for Recurrence {
+            type Item = u64;
+
+            #[inline]
+            fn next(&amp;mut self) -&gt; Option&lt;u64&gt; {
+                if self.pos &lt; 2 {
+                    let next_val = self.mem[self.pos];
+                    self.pos += 1;
+                    Some(next_val)
+                } else {
+                    let next_val = {
+                        let n = self.pos;
+                        let a = IndexOffset { slice: &amp;self.mem, offset: n };
+                        (a[n-1] + a[n-2])
+                    };
+
+                    {
+                        use std::mem::swap;
+
+                        let mut swap_tmp = next_val;
+                        for i in (0..2).rev() {
+                            swap(&amp;mut swap_tmp, &amp;mut self.mem[i]);
+                        }
+                    }
+
+                    self.pos += 1;
+                    Some(next_val)
+                }
+            }
+        }
+
+        Recurrence { mem: [0, 1], pos: 0 }
+    };
+
+    for e in fib.take(10) { println!(&quot;{}&quot;, e) }
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>recurrence</span> {
+    ( <span class='ident'>a</span>[<span class='ident'>n</span>]: <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>sty</span>:<span class='ident'>ty</span> <span class='op'>=</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>inits</span>:<span class='ident'>expr</span>),<span class='op'>+</span> , ... , <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>recur</span>:<span class='ident'>expr</span> ) <span class='op'>=&gt;</span> { <span class='comment'>/* ... */</span> };
+}
+
+<span class='kw'>fn</span> <span class='ident'>main</span>() {
+    <span class='comment'>/*
+    let fib = recurrence![a[n]: u64 = 0, 1, ..., a[n-1] + a[n-2]];
+
+    for e in fib.take(10) { println!(&quot;{}&quot;, e) }
+    */</span>
+    <span class='kw'>let</span> <span class='ident'>fib</span> <span class='op'>=</span> {
+        <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>ops</span>::<span class='ident'>Index</span>;
+
+        <span class='kw'>struct</span> <span class='ident'>Recurrence</span> {
+            <span class='ident'>mem</span>: [<span class='ident'>u64</span>; <span class='number'>2</span>],
+            <span class='ident'>pos</span>: <span class='ident'>usize</span>,
+        }
+
+        <span class='kw'>struct</span> <span class='ident'>IndexOffset</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
+            <span class='ident'>slice</span>: <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;a</span> [<span class='ident'>u64</span>; <span class='number'>2</span>],
+            <span class='ident'>offset</span>: <span class='ident'>usize</span>,
+        }
+
+        <span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>Index</span><span class='op'>&lt;</span><span class='ident'>usize</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>IndexOffset</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
+            <span class='kw'>type</span> <span class='ident'>Output</span> <span class='op'>=</span> <span class='ident'>u64</span>;
+
+            <span class='attribute'>#[<span class='ident'>inline</span>(<span class='ident'>always</span>)]</span>
+            <span class='kw'>fn</span> <span class='ident'>index</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='lifetime'>&#39;b</span> <span class='self'>self</span>, <span class='ident'>index</span>: <span class='ident'>usize</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;b</span> <span class='ident'>u64</span> {
+                <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>num</span>::<span class='ident'>Wrapping</span>;
+
+                <span class='kw'>let</span> <span class='ident'>index</span> <span class='op'>=</span> <span class='ident'>Wrapping</span>(<span class='ident'>index</span>);
+                <span class='kw'>let</span> <span class='ident'>offset</span> <span class='op'>=</span> <span class='ident'>Wrapping</span>(<span class='self'>self</span>.<span class='ident'>offset</span>);
+                <span class='kw'>let</span> <span class='ident'>window</span> <span class='op'>=</span> <span class='ident'>Wrapping</span>(<span class='number'>2</span>);
+
+                <span class='kw'>let</span> <span class='ident'>real_index</span> <span class='op'>=</span> <span class='ident'>index</span> <span class='op'>-</span> <span class='ident'>offset</span> <span class='op'>+</span> <span class='ident'>window</span>;
+                <span class='kw-2'>&amp;</span><span class='self'>self</span>.<span class='ident'>slice</span>[<span class='ident'>real_index</span>.<span class='number'>0</span>]
+            }
+        }
+
+        <span class='kw'>impl</span> <span class='ident'>Iterator</span> <span class='kw'>for</span> <span class='ident'>Recurrence</span> {
+            <span class='kw'>type</span> <span class='ident'>Item</span> <span class='op'>=</span> <span class='ident'>u64</span>;
+
+            <span class='attribute'>#[<span class='ident'>inline</span>]</span>
+            <span class='kw'>fn</span> <span class='ident'>next</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>u64</span><span class='op'>&gt;</span> {
+                <span class='kw'>if</span> <span class='self'>self</span>.<span class='ident'>pos</span> <span class='op'>&lt;</span> <span class='number'>2</span> {
+                    <span class='kw'>let</span> <span class='ident'>next_val</span> <span class='op'>=</span> <span class='self'>self</span>.<span class='ident'>mem</span>[<span class='self'>self</span>.<span class='ident'>pos</span>];
+                    <span class='self'>self</span>.<span class='ident'>pos</span> <span class='op'>+=</span> <span class='number'>1</span>;
+                    <span class='prelude-val'>Some</span>(<span class='ident'>next_val</span>)
+                } <span class='kw'>else</span> {
+                    <span class='kw'>let</span> <span class='ident'>next_val</span> <span class='op'>=</span> {
+                        <span class='kw'>let</span> <span class='ident'>n</span> <span class='op'>=</span> <span class='self'>self</span>.<span class='ident'>pos</span>;
+                        <span class='kw'>let</span> <span class='ident'>a</span> <span class='op'>=</span> <span class='ident'>IndexOffset</span> { <span class='ident'>slice</span>: <span class='kw-2'>&amp;</span><span class='self'>self</span>.<span class='ident'>mem</span>, <span class='ident'>offset</span>: <span class='ident'>n</span> };
+                        (<span class='ident'>a</span>[<span class='ident'>n</span><span class='op'>-</span><span class='number'>1</span>] <span class='op'>+</span> <span class='ident'>a</span>[<span class='ident'>n</span><span class='op'>-</span><span class='number'>2</span>])
+                    };
+
+                    {
+                        <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>mem</span>::<span class='ident'>swap</span>;
+
+                        <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>swap_tmp</span> <span class='op'>=</span> <span class='ident'>next_val</span>;
+                        <span class='kw'>for</span> <span class='ident'>i</span> <span class='kw'>in</span> (<span class='number'>0</span>..<span class='number'>2</span>).<span class='ident'>rev</span>() {
+                            <span class='ident'>swap</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>swap_tmp</span>, <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>.<span class='ident'>mem</span>[<span class='ident'>i</span>]);
+                        }
+                    }
+
+                    <span class='self'>self</span>.<span class='ident'>pos</span> <span class='op'>+=</span> <span class='number'>1</span>;
+                    <span class='prelude-val'>Some</span>(<span class='ident'>next_val</span>)
+                }
+            }
+        }
+
+        <span class='ident'>Recurrence</span> { <span class='ident'>mem</span>: [<span class='number'>0</span>, <span class='number'>1</span>], <span class='ident'>pos</span>: <span class='number'>0</span> }
+    };
+
+    <span class='kw'>for</span> <span class='ident'>e</span> <span class='kw'>in</span> <span class='ident'>fib</span>.<span class='ident'>take</span>(<span class='number'>10</span>) { <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;{}&quot;</span>, <span class='ident'>e</span>) }
+}</pre>
+
+<p>Note that I&#39;ve changed the order of the declarations of <code>n</code> and <code>a</code>, as well as wrapped them (along with the recurrence expression) in a block.  The reason for the first should be obvious (<code>n</code> needs to be defined first so I can use it for <code>a</code>).  The reason for the second is that the borrowed reference <code>&amp;self.mem</code> will prevent the swaps later on from happening (you cannot mutate something that is aliased elsewhere).  The block ensures that the <code>&amp;self.mem</code> borrow expires before then.</p>
+
+<p>Incidentally, the only reason the code that does the <code>mem</code> swaps is in a block is to narrow the scope in which <code>std::mem::swap</code> is available, for the sake of being tidy.</p>
+
+<p>If we take this code and run it, we get:</p>
+
+<pre><code class="language-text">0
+1
+2
+3
+5
+8
+13
+21
+34
+</code></pre>
+
+<p>Success!  Now, let&#39;s copy &amp; paste this into the macro expansion, and replace the expanded code with an invocation.  This gives us:</p>
+<span class='rusttest'>macro_rules! recurrence {
+    ( a[n]: $sty:ty = $($inits:expr),+ , ... , $recur:expr ) =&gt; {
+        {
+            /*
+                What follows here is *literally* the code from before,
+                cut and pasted into a new position.  No other changes
+                have been made.
+            */
+
+            use std::ops::Index;
+
+            struct Recurrence {
+                mem: [u64; 2],
+                pos: usize,
+            }
+
+            struct IndexOffset&lt;&#39;a&gt; {
+                slice: &amp;&#39;a [u64; 2],
+                offset: usize,
+            }
+
+            impl&lt;&#39;a&gt; Index&lt;usize&gt; for IndexOffset&lt;&#39;a&gt; {
+                type Output = u64;
+
+                #[inline(always)]
+                fn index&lt;&#39;b&gt;(&amp;&#39;b self, index: usize) -&gt; &amp;&#39;b u64 {
+                    use std::num::Wrapping;
+
+                    let index = Wrapping(index);
+                    let offset = Wrapping(self.offset);
+                    let window = Wrapping(2);
+
+                    let real_index = index - offset + window;
+                    &amp;self.slice[real_index.0]
+                }
+            }
+
+            impl Iterator for Recurrence {
+                type Item = u64;
+
+                #[inline]
+                fn next(&amp;mut self) -&gt; Option&lt;u64&gt; {
+                    if self.pos &lt; 2 {
+                        let next_val = self.mem[self.pos];
+                        self.pos += 1;
+                        Some(next_val)
+                    } else {
+                        let next_val = {
+                            let n = self.pos;
+                            let a = IndexOffset { slice: &amp;self.mem, offset: n };
+                            (a[n-1] + a[n-2])
+                        };
+
+                        {
+                            use std::mem::swap;
+
+                            let mut swap_tmp = next_val;
+                            for i in (0..2).rev() {
+                                swap(&amp;mut swap_tmp, &amp;mut self.mem[i]);
+                            }
+                        }
+
+                        self.pos += 1;
+                        Some(next_val)
+                    }
+                }
+            }
+
+            Recurrence { mem: [0, 1], pos: 0 }
+        }
+    };
+}
+
+fn main() {
+    let fib = recurrence![a[n]: u64 = 0, 1, ..., a[n-1] + a[n-2]];
+
+    for e in fib.take(10) { println!(&quot;{}&quot;, e) }
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>recurrence</span> {
+    ( <span class='ident'>a</span>[<span class='ident'>n</span>]: <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>sty</span>:<span class='ident'>ty</span> <span class='op'>=</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>inits</span>:<span class='ident'>expr</span>),<span class='op'>+</span> , ... , <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>recur</span>:<span class='ident'>expr</span> ) <span class='op'>=&gt;</span> {
+        {
+            <span class='comment'>/*
+                What follows here is *literally* the code from before,
+                cut and pasted into a new position.  No other changes
+                have been made.
+            */</span>
+
+            <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>ops</span>::<span class='ident'>Index</span>;
+
+            <span class='kw'>struct</span> <span class='ident'>Recurrence</span> {
+                <span class='ident'>mem</span>: [<span class='ident'>u64</span>; <span class='number'>2</span>],
+                <span class='ident'>pos</span>: <span class='ident'>usize</span>,
+            }
+
+            <span class='kw'>struct</span> <span class='ident'>IndexOffset</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
+                <span class='ident'>slice</span>: <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;a</span> [<span class='ident'>u64</span>; <span class='number'>2</span>],
+                <span class='ident'>offset</span>: <span class='ident'>usize</span>,
+            }
+
+            <span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>Index</span><span class='op'>&lt;</span><span class='ident'>usize</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>IndexOffset</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
+                <span class='kw'>type</span> <span class='ident'>Output</span> <span class='op'>=</span> <span class='ident'>u64</span>;
+
+                <span class='attribute'>#[<span class='ident'>inline</span>(<span class='ident'>always</span>)]</span>
+                <span class='kw'>fn</span> <span class='ident'>index</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='lifetime'>&#39;b</span> <span class='self'>self</span>, <span class='ident'>index</span>: <span class='ident'>usize</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;b</span> <span class='ident'>u64</span> {
+                    <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>num</span>::<span class='ident'>Wrapping</span>;
+
+                    <span class='kw'>let</span> <span class='ident'>index</span> <span class='op'>=</span> <span class='ident'>Wrapping</span>(<span class='ident'>index</span>);
+                    <span class='kw'>let</span> <span class='ident'>offset</span> <span class='op'>=</span> <span class='ident'>Wrapping</span>(<span class='self'>self</span>.<span class='ident'>offset</span>);
+                    <span class='kw'>let</span> <span class='ident'>window</span> <span class='op'>=</span> <span class='ident'>Wrapping</span>(<span class='number'>2</span>);
+
+                    <span class='kw'>let</span> <span class='ident'>real_index</span> <span class='op'>=</span> <span class='ident'>index</span> <span class='op'>-</span> <span class='ident'>offset</span> <span class='op'>+</span> <span class='ident'>window</span>;
+                    <span class='kw-2'>&amp;</span><span class='self'>self</span>.<span class='ident'>slice</span>[<span class='ident'>real_index</span>.<span class='number'>0</span>]
+                }
+            }
+
+            <span class='kw'>impl</span> <span class='ident'>Iterator</span> <span class='kw'>for</span> <span class='ident'>Recurrence</span> {
+                <span class='kw'>type</span> <span class='ident'>Item</span> <span class='op'>=</span> <span class='ident'>u64</span>;
+
+                <span class='attribute'>#[<span class='ident'>inline</span>]</span>
+                <span class='kw'>fn</span> <span class='ident'>next</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>u64</span><span class='op'>&gt;</span> {
+                    <span class='kw'>if</span> <span class='self'>self</span>.<span class='ident'>pos</span> <span class='op'>&lt;</span> <span class='number'>2</span> {
+                        <span class='kw'>let</span> <span class='ident'>next_val</span> <span class='op'>=</span> <span class='self'>self</span>.<span class='ident'>mem</span>[<span class='self'>self</span>.<span class='ident'>pos</span>];
+                        <span class='self'>self</span>.<span class='ident'>pos</span> <span class='op'>+=</span> <span class='number'>1</span>;
+                        <span class='prelude-val'>Some</span>(<span class='ident'>next_val</span>)
+                    } <span class='kw'>else</span> {
+                        <span class='kw'>let</span> <span class='ident'>next_val</span> <span class='op'>=</span> {
+                            <span class='kw'>let</span> <span class='ident'>n</span> <span class='op'>=</span> <span class='self'>self</span>.<span class='ident'>pos</span>;
+                            <span class='kw'>let</span> <span class='ident'>a</span> <span class='op'>=</span> <span class='ident'>IndexOffset</span> { <span class='ident'>slice</span>: <span class='kw-2'>&amp;</span><span class='self'>self</span>.<span class='ident'>mem</span>, <span class='ident'>offset</span>: <span class='ident'>n</span> };
+                            (<span class='ident'>a</span>[<span class='ident'>n</span><span class='op'>-</span><span class='number'>1</span>] <span class='op'>+</span> <span class='ident'>a</span>[<span class='ident'>n</span><span class='op'>-</span><span class='number'>2</span>])
+                        };
+
+                        {
+                            <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>mem</span>::<span class='ident'>swap</span>;
+
+                            <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>swap_tmp</span> <span class='op'>=</span> <span class='ident'>next_val</span>;
+                            <span class='kw'>for</span> <span class='ident'>i</span> <span class='kw'>in</span> (<span class='number'>0</span>..<span class='number'>2</span>).<span class='ident'>rev</span>() {
+                                <span class='ident'>swap</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>swap_tmp</span>, <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>.<span class='ident'>mem</span>[<span class='ident'>i</span>]);
+                            }
+                        }
+
+                        <span class='self'>self</span>.<span class='ident'>pos</span> <span class='op'>+=</span> <span class='number'>1</span>;
+                        <span class='prelude-val'>Some</span>(<span class='ident'>next_val</span>)
+                    }
+                }
+            }
+
+            <span class='ident'>Recurrence</span> { <span class='ident'>mem</span>: [<span class='number'>0</span>, <span class='number'>1</span>], <span class='ident'>pos</span>: <span class='number'>0</span> }
+        }
+    };
+}
+
+<span class='kw'>fn</span> <span class='ident'>main</span>() {
+    <span class='kw'>let</span> <span class='ident'>fib</span> <span class='op'>=</span> <span class='macro'>recurrence</span><span class='macro'>!</span>[<span class='ident'>a</span>[<span class='ident'>n</span>]: <span class='ident'>u64</span> <span class='op'>=</span> <span class='number'>0</span>, <span class='number'>1</span>, ..., <span class='ident'>a</span>[<span class='ident'>n</span><span class='op'>-</span><span class='number'>1</span>] <span class='op'>+</span> <span class='ident'>a</span>[<span class='ident'>n</span><span class='op'>-</span><span class='number'>2</span>]];
+
+    <span class='kw'>for</span> <span class='ident'>e</span> <span class='kw'>in</span> <span class='ident'>fib</span>.<span class='ident'>take</span>(<span class='number'>10</span>) { <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;{}&quot;</span>, <span class='ident'>e</span>) }
+}</pre>
+
+<p>Obviously, we aren&#39;t <em>using</em> the captures yet, but we can change that fairly easily.  However, if we try to compile this, <code>rustc</code> aborts, telling us:</p>
+
+<pre><code class="language-text">recurrence.rs:69:45: 69:48 error: local ambiguity: multiple parsing options: built-in NTs expr (&#39;inits&#39;) or 1 other options.
+recurrence.rs:69     let fib = recurrence![a[n]: u64 = 0, 1, ..., a[n-1] + a[n-2]];
+                                                             ^~~
+</code></pre>
+
+<p>Here, we&#39;ve run into a limitation of <code>macro_rules</code>.  The problem is that second comma.  When it sees it during expansion, <code>macro_rules</code> can&#39;t decide if it&#39;s supposed to parse <em>another</em> expression for <code>inits</code>, or <code>...</code>.  Sadly, it isn&#39;t quite clever enough to realise that <code>...</code> isn&#39;t a valid expression, so it gives up.  Theoretically, this <em>should</em> work as desired, but currently doesn&#39;t.</p>
+
+<blockquote>
+<p><strong>Aside</strong>: I <em>did</em> fib a little about how our rule would be interpreted by the macro system.  In general, it <em>should</em> work as described, but doesn&#39;t in this case.  The <code>macro_rules</code> machinery, as it stands, has its foibles, and its worthwhile remembering that on occasion, you&#39;ll need to contort a little to get it to work.</p>
+
+<p>In this <em>particular</em> case, there are two issues.  First, the macro system doesn&#39;t know what does and does not constitute the various grammar elements (<em>e.g.</em> an expression); that&#39;s the parser&#39;s job.  As such, it doesn&#39;t know that <code>...</code> isn&#39;t an expression.  Secondly, it has no way of trying to capture a compound grammar element (like an expression) without 100% committing to that capture.</p>
+
+<p>In other words, it can ask the parser to try and parse some input as an expression, but the parser will respond to any problems by aborting.  The only way the macro system can currently deal with this is to just try to forbid situations where this could be a problem.</p>
+
+<p>On the bright side, this is a state of affairs that exactly <em>no one</em> is enthusiastic about.  The <code>macro</code> keyword has already been reserved for a more rigorously-defined future macro system.  Until then, needs must.</p>
+</blockquote>
+
+<p>Thankfully, the fix is relatively simple: we remove the comma from the syntax.  To keep things balanced, we&#39;ll remove <em>both</em> commas around <code>...</code>:</p>
+<span class='rusttest'>macro_rules! recurrence {
+    ( a[n]: $sty:ty = $($inits:expr),+ ... $recur:expr ) =&gt; {
+//                                     ^~~ changed
+        /* ... */
+        // Cheat :D
+        (vec![0u64, 1, 2, 3, 5, 8, 13, 21, 34]).into_iter()
+    };
+}
+
+fn main() {
+    let fib = recurrence![a[n]: u64 = 0, 1 ... a[n-1] + a[n-2]];
+//                                         ^~~ changed
+
+    for e in fib.take(10) { println!(&quot;{}&quot;, e) }
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>recurrence</span> {
+    ( <span class='ident'>a</span>[<span class='ident'>n</span>]: <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>sty</span>:<span class='ident'>ty</span> <span class='op'>=</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>inits</span>:<span class='ident'>expr</span>),<span class='op'>+</span> ... <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>recur</span>:<span class='ident'>expr</span> ) <span class='op'>=&gt;</span> {
+<span class='comment'>//                                     ^~~ changed</span>
+        <span class='comment'>/* ... */</span>
+    };
+}
+
+<span class='kw'>fn</span> <span class='ident'>main</span>() {
+    <span class='kw'>let</span> <span class='ident'>fib</span> <span class='op'>=</span> <span class='macro'>recurrence</span><span class='macro'>!</span>[<span class='ident'>a</span>[<span class='ident'>n</span>]: <span class='ident'>u64</span> <span class='op'>=</span> <span class='number'>0</span>, <span class='number'>1</span> ... <span class='ident'>a</span>[<span class='ident'>n</span><span class='op'>-</span><span class='number'>1</span>] <span class='op'>+</span> <span class='ident'>a</span>[<span class='ident'>n</span><span class='op'>-</span><span class='number'>2</span>]];
+<span class='comment'>//                                         ^~~ changed</span>
+
+    <span class='kw'>for</span> <span class='ident'>e</span> <span class='kw'>in</span> <span class='ident'>fib</span>.<span class='ident'>take</span>(<span class='number'>10</span>) { <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;{}&quot;</span>, <span class='ident'>e</span>) }
+}</pre>
+
+<p>Success!  We can now start replacing things in the <em>expansion</em> with things we&#39;ve <em>captured</em>.</p>
+
+<h3 id="substitution" class='section-header'><a
+                           href="#substitution">Substitution</a></h3>
+<p>Substituting something you&#39;ve captured in a macro is quite simple; you can insert the contents of a capture <code>$sty:ty</code> by using <code>$sty</code>.  So, let&#39;s go through and fix the <code>u64</code>s:</p>
+<span class='rusttest'>macro_rules! recurrence {
+    ( a[n]: $sty:ty = $($inits:expr),+ ... $recur:expr ) =&gt; {
+        {
+            use std::ops::Index;
+
+            struct Recurrence {
+                mem: [$sty; 2],
+//                    ^~~~ changed
+                pos: usize,
+            }
+
+            struct IndexOffset&lt;&#39;a&gt; {
+                slice: &amp;&#39;a [$sty; 2],
+//                          ^~~~ changed
+                offset: usize,
+            }
+
+            impl&lt;&#39;a&gt; Index&lt;usize&gt; for IndexOffset&lt;&#39;a&gt; {
+                type Output = $sty;
+//                            ^~~~ changed
+
+                #[inline(always)]
+                fn index&lt;&#39;b&gt;(&amp;&#39;b self, index: usize) -&gt; &amp;&#39;b $sty {
+//                                                          ^~~~ changed
+                    use std::num::Wrapping;
+
+                    let index = Wrapping(index);
+                    let offset = Wrapping(self.offset);
+                    let window = Wrapping(2);
+
+                    let real_index = index - offset + window;
+                    &amp;self.slice[real_index.0]
+                }
+            }
+
+            impl Iterator for Recurrence {
+                type Item = $sty;
+//                          ^~~~ changed
+
+                #[inline]
+                fn next(&amp;mut self) -&gt; Option&lt;$sty&gt; {
+//                                           ^~~~ changed
+                    /* ... */
+                    if self.pos &lt; 2 {
+                        let next_val = self.mem[self.pos];
+                        self.pos += 1;
+                        Some(next_val)
+                    } else {
+                        let next_val = {
+                            let n = self.pos;
+                            let a = IndexOffset { slice: &amp;self.mem, offset: n };
+                            (a[n-1] + a[n-2])
+                        };
+
+                        {
+                            use std::mem::swap;
+
+                            let mut swap_tmp = next_val;
+                            for i in (0..2).rev() {
+                                swap(&amp;mut swap_tmp, &amp;mut self.mem[i]);
+                            }
+                        }
+
+                        self.pos += 1;
+                        Some(next_val)
+                    }
+                }
+            }
+
+            Recurrence { mem: [1, 1], pos: 0 }
+        }
+    };
+}
+
+fn main() {
+    let fib = recurrence![a[n]: u64 = 0, 1 ... a[n-1] + a[n-2]];
+
+    for e in fib.take(10) { println!(&quot;{}&quot;, e) }
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>recurrence</span> {
+    ( <span class='ident'>a</span>[<span class='ident'>n</span>]: <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>sty</span>:<span class='ident'>ty</span> <span class='op'>=</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>inits</span>:<span class='ident'>expr</span>),<span class='op'>+</span> ... <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>recur</span>:<span class='ident'>expr</span> ) <span class='op'>=&gt;</span> {
+        {
+            <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>ops</span>::<span class='ident'>Index</span>;
+
+            <span class='kw'>struct</span> <span class='ident'>Recurrence</span> {
+                <span class='ident'>mem</span>: [<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>sty</span>; <span class='number'>2</span>],
+<span class='comment'>//                    ^~~~ changed</span>
+                <span class='ident'>pos</span>: <span class='ident'>usize</span>,
+            }
+
+            <span class='kw'>struct</span> <span class='ident'>IndexOffset</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
+                <span class='ident'>slice</span>: <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;a</span> [<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>sty</span>; <span class='number'>2</span>],
+<span class='comment'>//                          ^~~~ changed</span>
+                <span class='ident'>offset</span>: <span class='ident'>usize</span>,
+            }
+
+            <span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>Index</span><span class='op'>&lt;</span><span class='ident'>usize</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>IndexOffset</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
+                <span class='kw'>type</span> <span class='ident'>Output</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>sty</span>;
+<span class='comment'>//                            ^~~~ changed</span>
+
+                <span class='attribute'>#[<span class='ident'>inline</span>(<span class='ident'>always</span>)]</span>
+                <span class='kw'>fn</span> <span class='ident'>index</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='lifetime'>&#39;b</span> <span class='self'>self</span>, <span class='ident'>index</span>: <span class='ident'>usize</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;b</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>sty</span> {
+<span class='comment'>//                                                          ^~~~ changed</span>
+                    <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>num</span>::<span class='ident'>Wrapping</span>;
+
+                    <span class='kw'>let</span> <span class='ident'>index</span> <span class='op'>=</span> <span class='ident'>Wrapping</span>(<span class='ident'>index</span>);
+                    <span class='kw'>let</span> <span class='ident'>offset</span> <span class='op'>=</span> <span class='ident'>Wrapping</span>(<span class='self'>self</span>.<span class='ident'>offset</span>);
+                    <span class='kw'>let</span> <span class='ident'>window</span> <span class='op'>=</span> <span class='ident'>Wrapping</span>(<span class='number'>2</span>);
+
+                    <span class='kw'>let</span> <span class='ident'>real_index</span> <span class='op'>=</span> <span class='ident'>index</span> <span class='op'>-</span> <span class='ident'>offset</span> <span class='op'>+</span> <span class='ident'>window</span>;
+                    <span class='kw-2'>&amp;</span><span class='self'>self</span>.<span class='ident'>slice</span>[<span class='ident'>real_index</span>.<span class='number'>0</span>]
+                }
+            }
+
+            <span class='kw'>impl</span> <span class='ident'>Iterator</span> <span class='kw'>for</span> <span class='ident'>Recurrence</span> {
+                <span class='kw'>type</span> <span class='ident'>Item</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>sty</span>;
+<span class='comment'>//                          ^~~~ changed</span>
+
+                <span class='attribute'>#[<span class='ident'>inline</span>]</span>
+                <span class='kw'>fn</span> <span class='ident'>next</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>sty</span><span class='op'>&gt;</span> {
+<span class='comment'>//                                           ^~~~ changed</span>
+                    <span class='comment'>/* ... */</span>
+                }
+            }
+
+            <span class='ident'>Recurrence</span> { <span class='ident'>mem</span>: [<span class='number'>1</span>, <span class='number'>1</span>], <span class='ident'>pos</span>: <span class='number'>0</span> }
+        }
+    };
+}
+
+<span class='kw'>fn</span> <span class='ident'>main</span>() {
+    <span class='kw'>let</span> <span class='ident'>fib</span> <span class='op'>=</span> <span class='macro'>recurrence</span><span class='macro'>!</span>[<span class='ident'>a</span>[<span class='ident'>n</span>]: <span class='ident'>u64</span> <span class='op'>=</span> <span class='number'>0</span>, <span class='number'>1</span> ... <span class='ident'>a</span>[<span class='ident'>n</span><span class='op'>-</span><span class='number'>1</span>] <span class='op'>+</span> <span class='ident'>a</span>[<span class='ident'>n</span><span class='op'>-</span><span class='number'>2</span>]];
+
+    <span class='kw'>for</span> <span class='ident'>e</span> <span class='kw'>in</span> <span class='ident'>fib</span>.<span class='ident'>take</span>(<span class='number'>10</span>) { <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;{}&quot;</span>, <span class='ident'>e</span>) }
+}</pre>
+
+<p>Let&#39;s tackle a harder one: how to turn <code>inits</code> into both the array literal <code>[0, 1]</code> <em>and</em> the array type, <code>[$sty; 2]</code>.  The first one we can do like so:</p>
+<span class='rusttest'>fn main() {
+                Recurrence { mem: [$($inits),+], pos: 0 }
+    //                             ^~~~~~~~~~~ changed
+    
+}</span><pre class='rust rust-example-rendered'>
+            <span class='ident'>Recurrence</span> { <span class='ident'>mem</span>: [$(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>inits</span>),<span class='op'>+</span>], <span class='ident'>pos</span>: <span class='number'>0</span> }
+<span class='comment'>//                             ^~~~~~~~~~~ changed</span></pre>
+
+<p>This effectively does the opposite of the capture: repeat <code>inits</code> one or more times, separating each with a comma.  This expands to the expected sequence of tokens: <code>0, 1</code>.</p>
+
+<p>Somehow turning <code>inits</code> into a literal <code>2</code> is a little trickier.  It turns out that there&#39;s no direct way to do this, but we <em>can</em> do it by using a second macro.  Let&#39;s take this one step at a time.</p>
+<span class='rusttest'>macro_rules! count_exprs {
+    /* ??? */
+    () =&gt; {}
+}
+fn main() {}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>count_exprs</span> {
+    <span class='comment'>/* ??? */</span>
+}</pre>
+
+<p>The obvious case is: given zero expressions, you would expect <code>count_exprs</code> to expand to a literal <code>0</code>.</p>
+<span class='rusttest'>macro_rules! count_exprs {
+    () =&gt; (0);
+//  ^~~~~~~~~~ added
+}
+fn main() {
+    const _0: usize = count_exprs!();
+    assert_eq!(_0, 0);
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>count_exprs</span> {
+    () <span class='op'>=&gt;</span> (<span class='number'>0</span>);
+<span class='comment'>//  ^~~~~~~~~~ added</span>
+}</pre>
+
+<blockquote>
+<p><strong>Aside</strong>: You may have noticed I used parentheses here instead of curly braces for the expansion.  <code>macro_rules</code> really doesn&#39;t care <em>what</em> you use, so long as it&#39;s one of the &quot;matcher&quot; pairs: <code>( )</code>, <code>{ }</code> or <code>[ ]</code>.  In fact, you can switch out the matchers on the macro itself (<em>i.e.</em> the matchers right after the macro name), the matchers around the syntax rule, and the matchers around the corresponding expansion.</p>
+
+<p>You can also switch out the matchers used when you <em>invoke</em> a macro, but in a more limited fashion: a macro invoked as <code>{ ... }</code> or <code>( ... );</code> will <em>always</em> be parsed as an <em>item</em> (<em>i.e.</em> like a <code>struct</code> or <code>fn</code> declaration).  This is important when using macros in a function body; it helps disambiguate between &quot;parse like an expression&quot; and &quot;parse like a statement&quot;.</p>
+</blockquote>
+
+<p>What if you have <em>one</em> expression?  That should be a literal <code>1</code>.</p>
+<span class='rusttest'>macro_rules! count_exprs {
+    () =&gt; (0);
+    ($e:expr) =&gt; (1);
+//  ^~~~~~~~~~~~~~~~~ added
+}
+fn main() {
+    const _0: usize = count_exprs!();
+    const _1: usize = count_exprs!(x);
+    assert_eq!(_0, 0);
+    assert_eq!(_1, 1);
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>count_exprs</span> {
+    () <span class='op'>=&gt;</span> (<span class='number'>0</span>);
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> (<span class='number'>1</span>);
+<span class='comment'>//  ^~~~~~~~~~~~~~~~~ added</span>
+}</pre>
+
+<p>Two?</p>
+<span class='rusttest'>macro_rules! count_exprs {
+    () =&gt; (0);
+    ($e:expr) =&gt; (1);
+    ($e0:expr, $e1:expr) =&gt; (2);
+//  ^~~~~~~~~~~~~~~~~~~~~~~~~~~~ added
+}
+fn main() {
+    const _0: usize = count_exprs!();
+    const _1: usize = count_exprs!(x);
+    const _2: usize = count_exprs!(x, y);
+    assert_eq!(_0, 0);
+    assert_eq!(_1, 1);
+    assert_eq!(_2, 2);
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>count_exprs</span> {
+    () <span class='op'>=&gt;</span> (<span class='number'>0</span>);
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> (<span class='number'>1</span>);
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e0</span>:<span class='ident'>expr</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e1</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> (<span class='number'>2</span>);
+<span class='comment'>//  ^~~~~~~~~~~~~~~~~~~~~~~~~~~~ added</span>
+}</pre>
+
+<p>We can &quot;simplify&quot; this a little by re-expressing the case of two expressions recursively.</p>
+<span class='rusttest'>macro_rules! count_exprs {
+    () =&gt; (0);
+    ($e:expr) =&gt; (1);
+    ($e0:expr, $e1:expr) =&gt; (1 + count_exprs!($e1));
+//                           ^~~~~~~~~~~~~~~~~~~~~ changed
+}
+fn main() {
+    const _0: usize = count_exprs!();
+    const _1: usize = count_exprs!(x);
+    const _2: usize = count_exprs!(x, y);
+    assert_eq!(_0, 0);
+    assert_eq!(_1, 1);
+    assert_eq!(_2, 2);
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>count_exprs</span> {
+    () <span class='op'>=&gt;</span> (<span class='number'>0</span>);
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> (<span class='number'>1</span>);
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e0</span>:<span class='ident'>expr</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e1</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> (<span class='number'>1</span> <span class='op'>+</span> <span class='macro'>count_exprs</span><span class='macro'>!</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e1</span>));
+<span class='comment'>//                           ^~~~~~~~~~~~~~~~~~~~~ changed</span>
+}</pre>
+
+<p>This is fine since Rust can fold <code>1 + 1</code> into a constant value.  What if we have three expressions?</p>
+<span class='rusttest'>macro_rules! count_exprs {
+    () =&gt; (0);
+    ($e:expr) =&gt; (1);
+    ($e0:expr, $e1:expr) =&gt; (1 + count_exprs!($e1));
+    ($e0:expr, $e1:expr, $e2:expr) =&gt; (1 + count_exprs!($e1, $e2));
+//  ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ added
+}
+fn main() {
+    const _0: usize = count_exprs!();
+    const _1: usize = count_exprs!(x);
+    const _2: usize = count_exprs!(x, y);
+    const _3: usize = count_exprs!(x, y, z);
+    assert_eq!(_0, 0);
+    assert_eq!(_1, 1);
+    assert_eq!(_2, 2);
+    assert_eq!(_3, 3);
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>count_exprs</span> {
+    () <span class='op'>=&gt;</span> (<span class='number'>0</span>);
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> (<span class='number'>1</span>);
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e0</span>:<span class='ident'>expr</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e1</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> (<span class='number'>1</span> <span class='op'>+</span> <span class='macro'>count_exprs</span><span class='macro'>!</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e1</span>));
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e0</span>:<span class='ident'>expr</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e1</span>:<span class='ident'>expr</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e2</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> (<span class='number'>1</span> <span class='op'>+</span> <span class='macro'>count_exprs</span><span class='macro'>!</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e1</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e2</span>));
+<span class='comment'>//  ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ added</span>
+}</pre>
+
+<blockquote>
+<p><strong>Aside</strong>: You might be wondering if we could reverse the order of these rules.  In this particular case, <em>yes</em>, but the macro system can sometimes be picky about what it is and is not willing to recover from.  If you ever find yourself with a multi-rule macro that you <em>swear</em> should work, but gives you errors about unexpected tokens, try changing the order of the rules.</p>
+</blockquote>
+
+<p>Hopefully, you can see the pattern here.  We can always reduce the list of expressions by matching one expression, followed by zero or more expressions, expanding that into 1 + a count.</p>
+<span class='rusttest'>macro_rules! count_exprs {
+    () =&gt; (0);
+    ($head:expr) =&gt; (1);
+    ($head:expr, $($tail:expr),*) =&gt; (1 + count_exprs!($($tail),*));
+//  ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ changed
+}
+fn main() {
+    const _0: usize = count_exprs!();
+    const _1: usize = count_exprs!(x);
+    const _2: usize = count_exprs!(x, y);
+    const _3: usize = count_exprs!(x, y, z);
+    assert_eq!(_0, 0);
+    assert_eq!(_1, 1);
+    assert_eq!(_2, 2);
+    assert_eq!(_3, 3);
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>count_exprs</span> {
+    () <span class='op'>=&gt;</span> (<span class='number'>0</span>);
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>head</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> (<span class='number'>1</span>);
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>head</span>:<span class='ident'>expr</span>, $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>:<span class='ident'>expr</span>),<span class='op'>*</span>) <span class='op'>=&gt;</span> (<span class='number'>1</span> <span class='op'>+</span> <span class='macro'>count_exprs</span><span class='macro'>!</span>($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>),<span class='op'>*</span>));
+<span class='comment'>//  ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ changed</span>
+}</pre>
+
+<p>With this, we can now modify <code>recurrence</code> to determine the necessary size of <code>mem</code>.</p>
+<span class='rusttest'>// added:
+macro_rules! count_exprs {
+    () =&gt; (0);
+    ($head:expr) =&gt; (1);
+    ($head:expr, $($tail:expr),*) =&gt; (1 + count_exprs!($($tail),*));
+}
+
+macro_rules! recurrence {
+    ( a[n]: $sty:ty = $($inits:expr),+ ... $recur:expr ) =&gt; {
+        {
+            use std::ops::Index;
+
+            const MEM_SIZE: usize = count_exprs!($($inits),+);
+//          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ added
+
+            struct Recurrence {
+                mem: [$sty; MEM_SIZE],
+//                          ^~~~~~~~ changed
+                pos: usize,
+            }
+
+            struct IndexOffset&lt;&#39;a&gt; {
+                slice: &amp;&#39;a [$sty; MEM_SIZE],
+//                                ^~~~~~~~ changed
+                offset: usize,
+            }
+
+            impl&lt;&#39;a&gt; Index&lt;usize&gt; for IndexOffset&lt;&#39;a&gt; {
+                type Output = $sty;
+
+                #[inline(always)]
+                fn index&lt;&#39;b&gt;(&amp;&#39;b self, index: usize) -&gt; &amp;&#39;b $sty {
+                    use std::num::Wrapping;
+
+                    let index = Wrapping(index);
+                    let offset = Wrapping(self.offset);
+                    let window = Wrapping(MEM_SIZE);
+//                                        ^~~~~~~~ changed
+
+                    let real_index = index - offset + window;
+                    &amp;self.slice[real_index.0]
+                }
+            }
+
+            impl Iterator for Recurrence {
+                type Item = $sty;
+
+                #[inline]
+                fn next(&amp;mut self) -&gt; Option&lt;$sty&gt; {
+                    if self.pos &lt; MEM_SIZE {
+//                                ^~~~~~~~ changed
+                        let next_val = self.mem[self.pos];
+                        self.pos += 1;
+                        Some(next_val)
+                    } else {
+                        let next_val = {
+                            let n = self.pos;
+                            let a = IndexOffset { slice: &amp;self.mem, offset: n };
+                            (a[n-1] + a[n-2])
+                        };
+
+                        {
+                            use std::mem::swap;
+
+                            let mut swap_tmp = next_val;
+                            for i in (0..MEM_SIZE).rev() {
+//                                       ^~~~~~~~ changed
+                                swap(&amp;mut swap_tmp, &amp;mut self.mem[i]);
+                            }
+                        }
+
+                        self.pos += 1;
+                        Some(next_val)
+                    }
+                }
+            }
+
+            Recurrence { mem: [$($inits),+], pos: 0 }
+        }
+    };
+}
+/* ... */
+
+fn main() {
+    let fib = recurrence![a[n]: u64 = 0, 1 ... a[n-1] + a[n-2]];
+
+    for e in fib.take(10) { println!(&quot;{}&quot;, e) }
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='comment'>// added:</span>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>count_exprs</span> {
+    () <span class='op'>=&gt;</span> (<span class='number'>0</span>);
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>head</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> (<span class='number'>1</span>);
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>head</span>:<span class='ident'>expr</span>, $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>:<span class='ident'>expr</span>),<span class='op'>*</span>) <span class='op'>=&gt;</span> (<span class='number'>1</span> <span class='op'>+</span> <span class='macro'>count_exprs</span><span class='macro'>!</span>($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>),<span class='op'>*</span>));
+}
+
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>recurrence</span> {
+    ( <span class='ident'>a</span>[<span class='ident'>n</span>]: <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>sty</span>:<span class='ident'>ty</span> <span class='op'>=</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>inits</span>:<span class='ident'>expr</span>),<span class='op'>+</span> ... <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>recur</span>:<span class='ident'>expr</span> ) <span class='op'>=&gt;</span> {
+        {
+            <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>ops</span>::<span class='ident'>Index</span>;
+
+            <span class='kw'>const</span> <span class='ident'>MEM_SIZE</span>: <span class='ident'>usize</span> <span class='op'>=</span> <span class='macro'>count_exprs</span><span class='macro'>!</span>($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>inits</span>),<span class='op'>+</span>);
+<span class='comment'>//          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ added</span>
+
+            <span class='kw'>struct</span> <span class='ident'>Recurrence</span> {
+                <span class='ident'>mem</span>: [<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>sty</span>; <span class='ident'>MEM_SIZE</span>],
+<span class='comment'>//                          ^~~~~~~~ changed</span>
+                <span class='ident'>pos</span>: <span class='ident'>usize</span>,
+            }
+
+            <span class='kw'>struct</span> <span class='ident'>IndexOffset</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
+                <span class='ident'>slice</span>: <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;a</span> [<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>sty</span>; <span class='ident'>MEM_SIZE</span>],
+<span class='comment'>//                                ^~~~~~~~ changed</span>
+                <span class='ident'>offset</span>: <span class='ident'>usize</span>,
+            }
+
+            <span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>Index</span><span class='op'>&lt;</span><span class='ident'>usize</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>IndexOffset</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
+                <span class='kw'>type</span> <span class='ident'>Output</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>sty</span>;
+
+                <span class='attribute'>#[<span class='ident'>inline</span>(<span class='ident'>always</span>)]</span>
+                <span class='kw'>fn</span> <span class='ident'>index</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='lifetime'>&#39;b</span> <span class='self'>self</span>, <span class='ident'>index</span>: <span class='ident'>usize</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;b</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>sty</span> {
+                    <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>num</span>::<span class='ident'>Wrapping</span>;
+
+                    <span class='kw'>let</span> <span class='ident'>index</span> <span class='op'>=</span> <span class='ident'>Wrapping</span>(<span class='ident'>index</span>);
+                    <span class='kw'>let</span> <span class='ident'>offset</span> <span class='op'>=</span> <span class='ident'>Wrapping</span>(<span class='self'>self</span>.<span class='ident'>offset</span>);
+                    <span class='kw'>let</span> <span class='ident'>window</span> <span class='op'>=</span> <span class='ident'>Wrapping</span>(<span class='ident'>MEM_SIZE</span>);
+<span class='comment'>//                                        ^~~~~~~~ changed</span>
+
+                    <span class='kw'>let</span> <span class='ident'>real_index</span> <span class='op'>=</span> <span class='ident'>index</span> <span class='op'>-</span> <span class='ident'>offset</span> <span class='op'>+</span> <span class='ident'>window</span>;
+                    <span class='kw-2'>&amp;</span><span class='self'>self</span>.<span class='ident'>slice</span>[<span class='ident'>real_index</span>.<span class='number'>0</span>]
+                }
+            }
+
+            <span class='kw'>impl</span> <span class='ident'>Iterator</span> <span class='kw'>for</span> <span class='ident'>Recurrence</span> {
+                <span class='kw'>type</span> <span class='ident'>Item</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>sty</span>;
+
+                <span class='attribute'>#[<span class='ident'>inline</span>]</span>
+                <span class='kw'>fn</span> <span class='ident'>next</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>sty</span><span class='op'>&gt;</span> {
+                    <span class='kw'>if</span> <span class='self'>self</span>.<span class='ident'>pos</span> <span class='op'>&lt;</span> <span class='ident'>MEM_SIZE</span> {
+<span class='comment'>//                                ^~~~~~~~ changed</span>
+                        <span class='kw'>let</span> <span class='ident'>next_val</span> <span class='op'>=</span> <span class='self'>self</span>.<span class='ident'>mem</span>[<span class='self'>self</span>.<span class='ident'>pos</span>];
+                        <span class='self'>self</span>.<span class='ident'>pos</span> <span class='op'>+=</span> <span class='number'>1</span>;
+                        <span class='prelude-val'>Some</span>(<span class='ident'>next_val</span>)
+                    } <span class='kw'>else</span> {
+                        <span class='kw'>let</span> <span class='ident'>next_val</span> <span class='op'>=</span> {
+                            <span class='kw'>let</span> <span class='ident'>n</span> <span class='op'>=</span> <span class='self'>self</span>.<span class='ident'>pos</span>;
+                            <span class='kw'>let</span> <span class='ident'>a</span> <span class='op'>=</span> <span class='ident'>IndexOffset</span> { <span class='ident'>slice</span>: <span class='kw-2'>&amp;</span><span class='self'>self</span>.<span class='ident'>mem</span>, <span class='ident'>offset</span>: <span class='ident'>n</span> };
+                            (<span class='ident'>a</span>[<span class='ident'>n</span><span class='op'>-</span><span class='number'>1</span>] <span class='op'>+</span> <span class='ident'>a</span>[<span class='ident'>n</span><span class='op'>-</span><span class='number'>2</span>])
+                        };
+
+                        {
+                            <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>mem</span>::<span class='ident'>swap</span>;
+
+                            <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>swap_tmp</span> <span class='op'>=</span> <span class='ident'>next_val</span>;
+                            <span class='kw'>for</span> <span class='ident'>i</span> <span class='kw'>in</span> (<span class='number'>0</span>..<span class='ident'>MEM_SIZE</span>).<span class='ident'>rev</span>() {
+<span class='comment'>//                                       ^~~~~~~~ changed</span>
+                                <span class='ident'>swap</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>swap_tmp</span>, <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>.<span class='ident'>mem</span>[<span class='ident'>i</span>]);
+                            }
+                        }
+
+                        <span class='self'>self</span>.<span class='ident'>pos</span> <span class='op'>+=</span> <span class='number'>1</span>;
+                        <span class='prelude-val'>Some</span>(<span class='ident'>next_val</span>)
+                    }
+                }
+            }
+
+            <span class='ident'>Recurrence</span> { <span class='ident'>mem</span>: [$(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>inits</span>),<span class='op'>+</span>], <span class='ident'>pos</span>: <span class='number'>0</span> }
+        }
+    };
+}
+<span class='comment'>/* ... */</span></pre>
+
+<p>With that done, we can now substitute the last thing: the <code>recur</code> expression.</p>
+<span class='rusttest'>macro_rules! count_exprs {
+    () =&gt; (0);
+    ($head:expr $(, $tail:expr)*) =&gt; (1 + count_exprs!($($tail),*));
+}
+macro_rules! recurrence {
+    ( a[n]: $sty:ty = $($inits:expr),+ ... $recur:expr ) =&gt; {
+        {
+            const MEMORY: uint = count_exprs!($($inits),+);
+            struct Recurrence {
+                mem: [$sty; MEMORY],
+                pos: uint,
+            }
+            struct IndexOffset&lt;&#39;a&gt; {
+                slice: &amp;&#39;a [$sty; MEMORY],
+                offset: uint,
+            }
+            impl&lt;&#39;a&gt; Index&lt;uint, $sty&gt; for IndexOffset&lt;&#39;a&gt; {
+                #[inline(always)]
+                fn index&lt;&#39;b&gt;(&amp;&#39;b self, index: &amp;uint) -&gt; &amp;&#39;b $sty {
+                    let real_index = *index - self.offset + MEMORY;
+                    &amp;self.slice[real_index]
+                }
+            }
+            impl Iterator&lt;u64&gt; for Recurrence {
+/* ... */
+                #[inline]
+                fn next(&amp;mut self) -&gt; Option&lt;u64&gt; {
+                    if self.pos &lt; MEMORY {
+                        let next_val = self.mem[self.pos];
+                        self.pos += 1;
+                        Some(next_val)
+                    } else {
+                        let next_val = {
+                            let n = self.pos;
+                            let a = IndexOffset { slice: &amp;self.mem, offset: n };
+                            $recur
+//                          ^~~~~~ changed
+                        };
+                        {
+                            use std::mem::swap;
+                            let mut swap_tmp = next_val;
+                            for i in range(0, MEMORY).rev() {
+                                swap(&amp;mut swap_tmp, &amp;mut self.mem[i]);
+                            }
+                        }
+                        self.pos += 1;
+                        Some(next_val)
+                    }
+                }
+/* ... */
+            }
+            Recurrence { mem: [$($inits),+], pos: 0 }
+        }
+    };
+}
+fn main() {
+    let fib = recurrence![a[n]: u64 = 1, 1 ... a[n-1] + a[n-2]];
+    for e in fib.take(10) { println!(&quot;{}&quot;, e) }
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='comment'>/* ... */</span>
+                <span class='attribute'>#[<span class='ident'>inline</span>]</span>
+                <span class='kw'>fn</span> <span class='ident'>next</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>u64</span><span class='op'>&gt;</span> {
+                    <span class='kw'>if</span> <span class='self'>self</span>.<span class='ident'>pos</span> <span class='op'>&lt;</span> <span class='ident'>MEMORY</span> {
+                        <span class='kw'>let</span> <span class='ident'>next_val</span> <span class='op'>=</span> <span class='self'>self</span>.<span class='ident'>mem</span>[<span class='self'>self</span>.<span class='ident'>pos</span>];
+                        <span class='self'>self</span>.<span class='ident'>pos</span> <span class='op'>+=</span> <span class='number'>1</span>;
+                        <span class='prelude-val'>Some</span>(<span class='ident'>next_val</span>)
+                    } <span class='kw'>else</span> {
+                        <span class='kw'>let</span> <span class='ident'>next_val</span> <span class='op'>=</span> {
+                            <span class='kw'>let</span> <span class='ident'>n</span> <span class='op'>=</span> <span class='self'>self</span>.<span class='ident'>pos</span>;
+                            <span class='kw'>let</span> <span class='ident'>a</span> <span class='op'>=</span> <span class='ident'>IndexOffset</span> { <span class='ident'>slice</span>: <span class='kw-2'>&amp;</span><span class='self'>self</span>.<span class='ident'>mem</span>, <span class='ident'>offset</span>: <span class='ident'>n</span> };
+                            <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>recur</span>
+<span class='comment'>//                          ^~~~~~ changed</span>
+                        };
+                        {
+                            <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>mem</span>::<span class='ident'>swap</span>;
+                            <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>swap_tmp</span> <span class='op'>=</span> <span class='ident'>next_val</span>;
+                            <span class='kw'>for</span> <span class='ident'>i</span> <span class='kw'>in</span> <span class='ident'>range</span>(<span class='number'>0</span>, <span class='ident'>MEMORY</span>).<span class='ident'>rev</span>() {
+                                <span class='ident'>swap</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>swap_tmp</span>, <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>.<span class='ident'>mem</span>[<span class='ident'>i</span>]);
+                            }
+                        }
+                        <span class='self'>self</span>.<span class='ident'>pos</span> <span class='op'>+=</span> <span class='number'>1</span>;
+                        <span class='prelude-val'>Some</span>(<span class='ident'>next_val</span>)
+                    }
+                }
+<span class='comment'>/* ... */</span></pre>
+
+<p>And, when we compile our finished macro...</p>
+
+<pre><code class="language-text">recurrence.rs:77:48: 77:49 error: unresolved name `a`
+recurrence.rs:77     let fib = recurrence![a[n]: u64 = 0, 1 ... a[n-1] + a[n-2]];
+                                                                ^
+recurrence.rs:7:1: 74:2 note: in expansion of recurrence!
+recurrence.rs:77:15: 77:64 note: expansion site
+recurrence.rs:77:50: 77:51 error: unresolved name `n`
+recurrence.rs:77     let fib = recurrence![a[n]: u64 = 0, 1 ... a[n-1] + a[n-2]];
+                                                                  ^
+recurrence.rs:7:1: 74:2 note: in expansion of recurrence!
+recurrence.rs:77:15: 77:64 note: expansion site
+recurrence.rs:77:57: 77:58 error: unresolved name `a`
+recurrence.rs:77     let fib = recurrence![a[n]: u64 = 0, 1 ... a[n-1] + a[n-2]];
+                                                                         ^
+recurrence.rs:7:1: 74:2 note: in expansion of recurrence!
+recurrence.rs:77:15: 77:64 note: expansion site
+recurrence.rs:77:59: 77:60 error: unresolved name `n`
+recurrence.rs:77     let fib = recurrence![a[n]: u64 = 0, 1 ... a[n-1] + a[n-2]];
+                                                                           ^
+recurrence.rs:7:1: 74:2 note: in expansion of recurrence!
+recurrence.rs:77:15: 77:64 note: expansion site
+</code></pre>
+
+<p>... wait, what?  That can&#39;t be right... let&#39;s check what the macro is expanding to.</p>
+
+<pre><code class="language-shell">$ rustc -Z unstable-options --pretty expanded recurrence.rs
+</code></pre>
+
+<p>The <code>--pretty expanded</code> argument tells <code>rustc</code> to perform macro expansion, then turn the resulting AST back into source code.  Because this option isn&#39;t considered stable yet, we also need <code>-Z unstable-options</code>.  The output (after cleaning up some formatting) is shown below; in particular, note the place in the code where <code>$recur</code> was substituted:</p>
+<span class='rusttest'>#![feature(no_std)]
+#![no_std]
+#[prelude_import]
+use std::prelude::v1::*;
+#[macro_use]
+extern crate std as std;
+fn main() {
+    let fib = {
+        use std::ops::Index;
+        const MEM_SIZE: usize = 1 + 1;
+        struct Recurrence {
+            mem: [u64; MEM_SIZE],
+            pos: usize,
+        }
+        struct IndexOffset&lt;&#39;a&gt; {
+            slice: &amp;&#39;a [u64; MEM_SIZE],
+            offset: usize,
+        }
+        impl &lt;&#39;a&gt; Index&lt;usize&gt; for IndexOffset&lt;&#39;a&gt; {
+            type Output = u64;
+            #[inline(always)]
+            fn index&lt;&#39;b&gt;(&amp;&#39;b self, index: usize) -&gt; &amp;&#39;b u64 {
+                use std::num::Wrapping;
+                let index = Wrapping(index);
+                let offset = Wrapping(self.offset);
+                let window = Wrapping(MEM_SIZE);
+                let real_index = index - offset + window;
+                &amp;self.slice[real_index.0]
+            }
+        }
+        impl Iterator for Recurrence {
+            type Item = u64;
+            #[inline]
+            fn next(&amp;mut self) -&gt; Option&lt;u64&gt; {
+                if self.pos &lt; MEM_SIZE {
+                    let next_val = self.mem[self.pos];
+                    self.pos += 1;
+                    Some(next_val)
+                } else {
+                    let next_val = {
+                        let n = self.pos;
+                        let a = IndexOffset{slice: &amp;self.mem, offset: n,};
+                        a[n - 1] + a[n - 2]
+                    };
+                    {
+                        use std::mem::swap;
+                        let mut swap_tmp = next_val;
+                        {
+                            let result =
+                                match ::std::iter::IntoIterator::into_iter((0..MEM_SIZE).rev()) {
+                                    mut iter =&gt; loop {
+                                        match ::std::iter::Iterator::next(&amp;mut iter) {
+                                            ::std::option::Option::Some(i) =&gt; {
+                                                swap(&amp;mut swap_tmp, &amp;mut self.mem[i]);
+                                            }
+                                            ::std::option::Option::None =&gt; break,
+                                        }
+                                    },
+                                };
+                            result
+                        }
+                    }
+                    self.pos += 1;
+                    Some(next_val)
+                }
+            }
+        }
+        Recurrence{mem: [0, 1], pos: 0,}
+    };
+    {
+        let result =
+            match ::std::iter::IntoIterator::into_iter(fib.take(10)) {
+                mut iter =&gt; loop {
+                    match ::std::iter::Iterator::next(&amp;mut iter) {
+                        ::std::option::Option::Some(e) =&gt; {
+                            ::std::io::_print(::std::fmt::Arguments::new_v1(
+                                {
+                                    static __STATIC_FMTSTR: &amp;&#39;static [&amp;&#39;static str] = &amp;[&quot;&quot;, &quot;\n&quot;];
+                                    __STATIC_FMTSTR
+                                },
+                                &amp;match (&amp;e,) {
+                                    (__arg0,) =&gt; [::std::fmt::ArgumentV1::new(__arg0, ::std::fmt::Display::fmt)],
+                                }
+                            ))
+                        }
+                        ::std::option::Option::None =&gt; break,
+                    }
+                },
+            };
+        result
+    }
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='attribute'>#<span class='op'>!</span>[<span class='ident'>feature</span>(<span class='ident'>no_std</span>)]</span>
+<span class='attribute'>#<span class='op'>!</span>[<span class='ident'>no_std</span>]</span>
+<span class='attribute'>#[<span class='ident'>prelude_import</span>]</span>
+<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>prelude</span>::<span class='ident'>v1</span>::<span class='op'>*</span>;
+<span class='attribute'>#[<span class='ident'>macro_use</span>]</span>
+<span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>std</span> <span class='kw'>as</span> <span class='ident'>std</span>;
+<span class='kw'>fn</span> <span class='ident'>main</span>() {
+    <span class='kw'>let</span> <span class='ident'>fib</span> <span class='op'>=</span> {
+        <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>ops</span>::<span class='ident'>Index</span>;
+        <span class='kw'>const</span> <span class='ident'>MEM_SIZE</span>: <span class='ident'>usize</span> <span class='op'>=</span> <span class='number'>1</span> <span class='op'>+</span> <span class='number'>1</span>;
+        <span class='kw'>struct</span> <span class='ident'>Recurrence</span> {
+            <span class='ident'>mem</span>: [<span class='ident'>u64</span>; <span class='ident'>MEM_SIZE</span>],
+            <span class='ident'>pos</span>: <span class='ident'>usize</span>,
+        }
+        <span class='kw'>struct</span> <span class='ident'>IndexOffset</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
+            <span class='ident'>slice</span>: <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;a</span> [<span class='ident'>u64</span>; <span class='ident'>MEM_SIZE</span>],
+            <span class='ident'>offset</span>: <span class='ident'>usize</span>,
+        }
+        <span class='kw'>impl</span> <span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>Index</span><span class='op'>&lt;</span><span class='ident'>usize</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>IndexOffset</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
+            <span class='kw'>type</span> <span class='ident'>Output</span> <span class='op'>=</span> <span class='ident'>u64</span>;
+            <span class='attribute'>#[<span class='ident'>inline</span>(<span class='ident'>always</span>)]</span>
+            <span class='kw'>fn</span> <span class='ident'>index</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='lifetime'>&#39;b</span> <span class='self'>self</span>, <span class='ident'>index</span>: <span class='ident'>usize</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;b</span> <span class='ident'>u64</span> {
+                <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>num</span>::<span class='ident'>Wrapping</span>;
+                <span class='kw'>let</span> <span class='ident'>index</span> <span class='op'>=</span> <span class='ident'>Wrapping</span>(<span class='ident'>index</span>);
+                <span class='kw'>let</span> <span class='ident'>offset</span> <span class='op'>=</span> <span class='ident'>Wrapping</span>(<span class='self'>self</span>.<span class='ident'>offset</span>);
+                <span class='kw'>let</span> <span class='ident'>window</span> <span class='op'>=</span> <span class='ident'>Wrapping</span>(<span class='ident'>MEM_SIZE</span>);
+                <span class='kw'>let</span> <span class='ident'>real_index</span> <span class='op'>=</span> <span class='ident'>index</span> <span class='op'>-</span> <span class='ident'>offset</span> <span class='op'>+</span> <span class='ident'>window</span>;
+                <span class='kw-2'>&amp;</span><span class='self'>self</span>.<span class='ident'>slice</span>[<span class='ident'>real_index</span>.<span class='number'>0</span>]
+            }
+        }
+        <span class='kw'>impl</span> <span class='ident'>Iterator</span> <span class='kw'>for</span> <span class='ident'>Recurrence</span> {
+            <span class='kw'>type</span> <span class='ident'>Item</span> <span class='op'>=</span> <span class='ident'>u64</span>;
+            <span class='attribute'>#[<span class='ident'>inline</span>]</span>
+            <span class='kw'>fn</span> <span class='ident'>next</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>u64</span><span class='op'>&gt;</span> {
+                <span class='kw'>if</span> <span class='self'>self</span>.<span class='ident'>pos</span> <span class='op'>&lt;</span> <span class='ident'>MEM_SIZE</span> {
+                    <span class='kw'>let</span> <span class='ident'>next_val</span> <span class='op'>=</span> <span class='self'>self</span>.<span class='ident'>mem</span>[<span class='self'>self</span>.<span class='ident'>pos</span>];
+                    <span class='self'>self</span>.<span class='ident'>pos</span> <span class='op'>+=</span> <span class='number'>1</span>;
+                    <span class='prelude-val'>Some</span>(<span class='ident'>next_val</span>)
+                } <span class='kw'>else</span> {
+                    <span class='kw'>let</span> <span class='ident'>next_val</span> <span class='op'>=</span> {
+                        <span class='kw'>let</span> <span class='ident'>n</span> <span class='op'>=</span> <span class='self'>self</span>.<span class='ident'>pos</span>;
+                        <span class='kw'>let</span> <span class='ident'>a</span> <span class='op'>=</span> <span class='ident'>IndexOffset</span>{<span class='ident'>slice</span>: <span class='kw-2'>&amp;</span><span class='self'>self</span>.<span class='ident'>mem</span>, <span class='ident'>offset</span>: <span class='ident'>n</span>,};
+                        <span class='ident'>a</span>[<span class='ident'>n</span> <span class='op'>-</span> <span class='number'>1</span>] <span class='op'>+</span> <span class='ident'>a</span>[<span class='ident'>n</span> <span class='op'>-</span> <span class='number'>2</span>]
+                    };
+                    {
+                        <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>mem</span>::<span class='ident'>swap</span>;
+                        <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>swap_tmp</span> <span class='op'>=</span> <span class='ident'>next_val</span>;
+                        {
+                            <span class='kw'>let</span> <span class='ident'>result</span> <span class='op'>=</span>
+                                <span class='kw'>match</span> ::<span class='ident'>std</span>::<span class='ident'>iter</span>::<span class='ident'>IntoIterator</span>::<span class='ident'>into_iter</span>((<span class='number'>0</span>..<span class='ident'>MEM_SIZE</span>).<span class='ident'>rev</span>()) {
+                                    <span class='kw-2'>mut</span> <span class='ident'>iter</span> <span class='op'>=&gt;</span> <span class='kw'>loop</span> {
+                                        <span class='kw'>match</span> ::<span class='ident'>std</span>::<span class='ident'>iter</span>::<span class='ident'>Iterator</span>::<span class='ident'>next</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>iter</span>) {
+                                            ::<span class='ident'>std</span>::<span class='ident'>option</span>::<span class='prelude-ty'>Option</span>::<span class='prelude-val'>Some</span>(<span class='ident'>i</span>) <span class='op'>=&gt;</span> {
+                                                <span class='ident'>swap</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>swap_tmp</span>, <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>.<span class='ident'>mem</span>[<span class='ident'>i</span>]);
+                                            }
+                                            ::<span class='ident'>std</span>::<span class='ident'>option</span>::<span class='prelude-ty'>Option</span>::<span class='prelude-val'>None</span> <span class='op'>=&gt;</span> <span class='kw'>break</span>,
+                                        }
+                                    },
+                                };
+                            <span class='ident'>result</span>
+                        }
+                    }
+                    <span class='self'>self</span>.<span class='ident'>pos</span> <span class='op'>+=</span> <span class='number'>1</span>;
+                    <span class='prelude-val'>Some</span>(<span class='ident'>next_val</span>)
+                }
+            }
+        }
+        <span class='ident'>Recurrence</span>{<span class='ident'>mem</span>: [<span class='number'>0</span>, <span class='number'>1</span>], <span class='ident'>pos</span>: <span class='number'>0</span>,}
+    };
+    {
+        <span class='kw'>let</span> <span class='ident'>result</span> <span class='op'>=</span>
+            <span class='kw'>match</span> ::<span class='ident'>std</span>::<span class='ident'>iter</span>::<span class='ident'>IntoIterator</span>::<span class='ident'>into_iter</span>(<span class='ident'>fib</span>.<span class='ident'>take</span>(<span class='number'>10</span>)) {
+                <span class='kw-2'>mut</span> <span class='ident'>iter</span> <span class='op'>=&gt;</span> <span class='kw'>loop</span> {
+                    <span class='kw'>match</span> ::<span class='ident'>std</span>::<span class='ident'>iter</span>::<span class='ident'>Iterator</span>::<span class='ident'>next</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>iter</span>) {
+                        ::<span class='ident'>std</span>::<span class='ident'>option</span>::<span class='prelude-ty'>Option</span>::<span class='prelude-val'>Some</span>(<span class='ident'>e</span>) <span class='op'>=&gt;</span> {
+                            ::<span class='ident'>std</span>::<span class='ident'>io</span>::<span class='ident'>_print</span>(::<span class='ident'>std</span>::<span class='ident'>fmt</span>::<span class='ident'>Arguments</span>::<span class='ident'>new_v1</span>(
+                                {
+                                    <span class='kw'>static</span> <span class='ident'>__STATIC_FMTSTR</span>: <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;static</span> [<span class='kw-2'>&amp;</span><span class='lifetime'>&#39;static</span> <span class='ident'>str</span>] <span class='op'>=</span> <span class='kw-2'>&amp;</span>[<span class='string'>&quot;&quot;</span>, <span class='string'>&quot;\n&quot;</span>];
+                                    <span class='ident'>__STATIC_FMTSTR</span>
+                                },
+                                <span class='kw-2'>&amp;</span><span class='kw'>match</span> (<span class='kw-2'>&amp;</span><span class='ident'>e</span>,) {
+                                    (<span class='ident'>__arg0</span>,) <span class='op'>=&gt;</span> [::<span class='ident'>std</span>::<span class='ident'>fmt</span>::<span class='ident'>ArgumentV1</span>::<span class='ident'>new</span>(<span class='ident'>__arg0</span>, ::<span class='ident'>std</span>::<span class='ident'>fmt</span>::<span class='ident'>Display</span>::<span class='ident'>fmt</span>)],
+                                }
+                            ))
+                        }
+                        ::<span class='ident'>std</span>::<span class='ident'>option</span>::<span class='prelude-ty'>Option</span>::<span class='prelude-val'>None</span> <span class='op'>=&gt;</span> <span class='kw'>break</span>,
+                    }
+                },
+            };
+        <span class='ident'>result</span>
+    }
+}</pre>
+
+<p>But that looks fine!  If we add a few missing <code>#![feature(...)]</code> attributes and feed it to a nightly build of <code>rustc</code>, it even compiles!  ... <em>what?!</em></p>
+
+<blockquote>
+<p><strong>Aside</strong>: You can&#39;t compile the above with a non-nightly build of <code>rustc</code>.  This is because the expansion of the <code>println!</code> macro depends on internal compiler details which are <em>not</em> publicly stabilised.</p>
+</blockquote>
+
+<h3 id="being-hygienic" class='section-header'><a
+                           href="#being-hygienic">Being Hygienic</a></h3>
+<p>The issue here is that identifiers in Rust macros are <em>hygienic</em>.  That is, identifiers from two different contexts <em>cannot</em> collide.  To show the difference, let&#39;s take a simpler example.</p>
+<span class='rusttest'>/*
+macro_rules! using_a {
+    ($e:expr) =&gt; {
+        {
+            let a = 42i;
+            $e
+        }
+    }
+}
+
+let four = using_a!(a / 10);
+*/
+fn main() {}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>using_a</span> {
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> {
+        {
+            <span class='kw'>let</span> <span class='ident'>a</span> <span class='op'>=</span> <span class='number'>42i</span>;
+            <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>
+        }
+    }
+}
+
+<span class='kw'>let</span> <span class='ident'>four</span> <span class='op'>=</span> <span class='macro'>using_a</span><span class='macro'>!</span>(<span class='ident'>a</span> <span class='op'>/</span> <span class='number'>10</span>);</pre>
+
+<p>This macro simply takes an expression, then wraps it in a block with a variable <code>a</code> defined.  We then use this as a round-about way of computing <code>4</code>.  There are actually <em>two</em> syntax contexts involved in this example, but they&#39;re invisible.  So, to help with this, let&#39;s give each context a different colour.  Let&#39;s start with the unexpanded code, where there is only a single context:</p>
+
+<pre class="rust rust-example-rendered"><span class="synctx-0"><span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">using_a</span> {&#xa;    (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">e</span>:<span class="ident">expr</span>) <span class="op">=&gt;</span> {&#xa;        {&#xa;            <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="number">42</span>;&#xa;            <span class="macro-nonterminal">$</span><span class="macro-nonterminal">e</span>&#xa;        }&#xa;    }&#xa;}&#xa;&#xa;<span class="kw">let</span> <span class="ident">four</span> <span class="op">=</span> <span class="macro">using_a</span><span class="macro">!</span>(<span class="ident">a</span> <span class="op">/</span> <span class="number">10</span>);</span></pre>
+
+<p>Now, let&#39;s expand the invocation.</p>
+
+<pre class="rust rust-example-rendered"><span class="synctx-0"><span class="kw">let</span> <span class="ident">four</span> <span class="op">=</span> </span><span class="synctx-1">{&#xa;    <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="number">42</span>;&#xa;    </span><span class="synctx-0"><span class="ident">a</span> <span class="op">/</span> <span class="number">10</span></span><span class="synctx-1">&#xa;}</span><span class="synctx-0">;</span></pre>
+
+<p>As you can see, the <code><span class="synctx-1">a</span></code> that&#39;s defined by the macro is in a different context to the <code><span class="synctx-0">a</span></code> we provided in our invocation.  As such, the compiler treats them as completely different identifiers, <em>even though they have the same lexical appearance</em>.</p>
+
+<p>This is something to be <em>really</em> careful of when working on macros: macros can produce ASTs which will not compile, but which <em>will</em> compile if written out by hand, or dumped using <code>--pretty expanded</code>.</p>
+
+<p>The solution to this is to capture the identifier <em>with the appropriate syntax context</em>.  To do that, we need to again adjust our macro syntax.  To continue with our simpler example:</p>
+
+<pre class="rust rust-example-rendered"><span class="synctx-0"><span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">using_a</span> {&#xa;    (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">a</span>:<span class="ident">ident</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">e</span>:<span class="ident">expr</span>) <span class="op">=&gt;</span> {&#xa;        {&#xa;            <span class="kw">let</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">a</span> <span class="op">=</span> <span class="number">42</span>;&#xa;            <span class="macro-nonterminal">$</span><span class="macro-nonterminal">e</span>&#xa;        }&#xa;    }&#xa;}&#xa;&#xa;<span class="kw">let</span> <span class="ident">four</span> <span class="op">=</span> <span class="macro">using_a</span><span class="macro">!</span>(<span class="ident">a</span>, <span class="ident">a</span> <span class="op">/</span> <span class="number">10</span>);</span></pre>
+
+<p>This now expands to:</p>
+
+<pre class="rust rust-example-rendered"><span class="synctx-0"><span class="kw">let</span> <span class="ident">four</span> <span class="op">=</span> </span><span class="synctx-1">{&#xa;    <span class="kw">let</span> </span><span class="synctx-0"><span class="ident">a</span></span><span class="synctx-1"> <span class="op">=</span> <span class="number">42</span>;&#xa;    </span><span class="synctx-0"><span class="ident">a</span> <span class="op">/</span> <span class="number">10</span></span><span class="synctx-1">&#xa;}</span><span class="synctx-0">;</span></pre>
+
+<p>Now, the contexts match, and the code will compile.  We can make this adjustment to our <code>recurrence!</code> macro by explicitly capturing <code>a</code> and <code>n</code>.  After making the necessary changes, we have:</p>
+<span class='rusttest'>macro_rules! count_exprs {
+    () =&gt; (0);
+    ($head:expr) =&gt; (1);
+    ($head:expr, $($tail:expr),*) =&gt; (1 + count_exprs!($($tail),*));
+}
+
+macro_rules! recurrence {
+    ( $seq:ident [ $ind:ident ]: $sty:ty = $($inits:expr),+ ... $recur:expr ) =&gt; {
+//    ^~~~~~~~~~   ^~~~~~~~~~ changed
+        {
+            use std::ops::Index;
+
+            const MEM_SIZE: usize = count_exprs!($($inits),+);
+
+            struct Recurrence {
+                mem: [$sty; MEM_SIZE],
+                pos: usize,
+            }
+
+            struct IndexOffset&lt;&#39;a&gt; {
+                slice: &amp;&#39;a [$sty; MEM_SIZE],
+                offset: usize,
+            }
+
+            impl&lt;&#39;a&gt; Index&lt;usize&gt; for IndexOffset&lt;&#39;a&gt; {
+                type Output = $sty;
+
+                #[inline(always)]
+                fn index&lt;&#39;b&gt;(&amp;&#39;b self, index: usize) -&gt; &amp;&#39;b $sty {
+                    use std::num::Wrapping;
+
+                    let index = Wrapping(index);
+                    let offset = Wrapping(self.offset);
+                    let window = Wrapping(MEM_SIZE);
+
+                    let real_index = index - offset + window;
+                    &amp;self.slice[real_index.0]
+                }
+            }
+
+            impl Iterator for Recurrence {
+                type Item = $sty;
+
+                #[inline]
+                fn next(&amp;mut self) -&gt; Option&lt;$sty&gt; {
+                    if self.pos &lt; MEM_SIZE {
+                        let next_val = self.mem[self.pos];
+                        self.pos += 1;
+                        Some(next_val)
+                    } else {
+                        let next_val = {
+                            let $ind = self.pos;
+//                              ^~~~ changed
+                            let $seq = IndexOffset { slice: &amp;self.mem, offset: $ind };
+//                              ^~~~ changed
+                            $recur
+                        };
+
+                        {
+                            use std::mem::swap;
+
+                            let mut swap_tmp = next_val;
+                            for i in (0..MEM_SIZE).rev() {
+                                swap(&amp;mut swap_tmp, &amp;mut self.mem[i]);
+                            }
+                        }
+
+                        self.pos += 1;
+                        Some(next_val)
+                    }
+                }
+            }
+
+            Recurrence { mem: [$($inits),+], pos: 0 }
+        }
+    };
+}
+
+fn main() {
+    let fib = recurrence![a[n]: u64 = 0, 1 ... a[n-1] + a[n-2]];
+
+    for e in fib.take(10) { println!(&quot;{}&quot;, e) }
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>count_exprs</span> {
+    () <span class='op'>=&gt;</span> (<span class='number'>0</span>);
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>head</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> (<span class='number'>1</span>);
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>head</span>:<span class='ident'>expr</span>, $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>:<span class='ident'>expr</span>),<span class='op'>*</span>) <span class='op'>=&gt;</span> (<span class='number'>1</span> <span class='op'>+</span> <span class='macro'>count_exprs</span><span class='macro'>!</span>($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>),<span class='op'>*</span>));
+}
+
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>recurrence</span> {
+    ( <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>seq</span>:<span class='ident'>ident</span> [ <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>ind</span>:<span class='ident'>ident</span> ]: <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>sty</span>:<span class='ident'>ty</span> <span class='op'>=</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>inits</span>:<span class='ident'>expr</span>),<span class='op'>+</span> ... <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>recur</span>:<span class='ident'>expr</span> ) <span class='op'>=&gt;</span> {
+<span class='comment'>//    ^~~~~~~~~~   ^~~~~~~~~~ changed</span>
+        {
+            <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>ops</span>::<span class='ident'>Index</span>;
+
+            <span class='kw'>const</span> <span class='ident'>MEM_SIZE</span>: <span class='ident'>usize</span> <span class='op'>=</span> <span class='macro'>count_exprs</span><span class='macro'>!</span>($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>inits</span>),<span class='op'>+</span>);
+
+            <span class='kw'>struct</span> <span class='ident'>Recurrence</span> {
+                <span class='ident'>mem</span>: [<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>sty</span>; <span class='ident'>MEM_SIZE</span>],
+                <span class='ident'>pos</span>: <span class='ident'>usize</span>,
+            }
+
+            <span class='kw'>struct</span> <span class='ident'>IndexOffset</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
+                <span class='ident'>slice</span>: <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;a</span> [<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>sty</span>; <span class='ident'>MEM_SIZE</span>],
+                <span class='ident'>offset</span>: <span class='ident'>usize</span>,
+            }
+
+            <span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>Index</span><span class='op'>&lt;</span><span class='ident'>usize</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>IndexOffset</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
+                <span class='kw'>type</span> <span class='ident'>Output</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>sty</span>;
+
+                <span class='attribute'>#[<span class='ident'>inline</span>(<span class='ident'>always</span>)]</span>
+                <span class='kw'>fn</span> <span class='ident'>index</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='lifetime'>&#39;b</span> <span class='self'>self</span>, <span class='ident'>index</span>: <span class='ident'>usize</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;b</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>sty</span> {
+                    <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>num</span>::<span class='ident'>Wrapping</span>;
+
+                    <span class='kw'>let</span> <span class='ident'>index</span> <span class='op'>=</span> <span class='ident'>Wrapping</span>(<span class='ident'>index</span>);
+                    <span class='kw'>let</span> <span class='ident'>offset</span> <span class='op'>=</span> <span class='ident'>Wrapping</span>(<span class='self'>self</span>.<span class='ident'>offset</span>);
+                    <span class='kw'>let</span> <span class='ident'>window</span> <span class='op'>=</span> <span class='ident'>Wrapping</span>(<span class='ident'>MEM_SIZE</span>);
+
+                    <span class='kw'>let</span> <span class='ident'>real_index</span> <span class='op'>=</span> <span class='ident'>index</span> <span class='op'>-</span> <span class='ident'>offset</span> <span class='op'>+</span> <span class='ident'>window</span>;
+                    <span class='kw-2'>&amp;</span><span class='self'>self</span>.<span class='ident'>slice</span>[<span class='ident'>real_index</span>.<span class='number'>0</span>]
+                }
+            }
+
+            <span class='kw'>impl</span> <span class='ident'>Iterator</span> <span class='kw'>for</span> <span class='ident'>Recurrence</span> {
+                <span class='kw'>type</span> <span class='ident'>Item</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>sty</span>;
+
+                <span class='attribute'>#[<span class='ident'>inline</span>]</span>
+                <span class='kw'>fn</span> <span class='ident'>next</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>sty</span><span class='op'>&gt;</span> {
+                    <span class='kw'>if</span> <span class='self'>self</span>.<span class='ident'>pos</span> <span class='op'>&lt;</span> <span class='ident'>MEM_SIZE</span> {
+                        <span class='kw'>let</span> <span class='ident'>next_val</span> <span class='op'>=</span> <span class='self'>self</span>.<span class='ident'>mem</span>[<span class='self'>self</span>.<span class='ident'>pos</span>];
+                        <span class='self'>self</span>.<span class='ident'>pos</span> <span class='op'>+=</span> <span class='number'>1</span>;
+                        <span class='prelude-val'>Some</span>(<span class='ident'>next_val</span>)
+                    } <span class='kw'>else</span> {
+                        <span class='kw'>let</span> <span class='ident'>next_val</span> <span class='op'>=</span> {
+                            <span class='kw'>let</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>ind</span> <span class='op'>=</span> <span class='self'>self</span>.<span class='ident'>pos</span>;
+<span class='comment'>//                              ^~~~ changed</span>
+                            <span class='kw'>let</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>seq</span> <span class='op'>=</span> <span class='ident'>IndexOffset</span> { <span class='ident'>slice</span>: <span class='kw-2'>&amp;</span><span class='self'>self</span>.<span class='ident'>mem</span>, <span class='ident'>offset</span>: <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>ind</span> };
+<span class='comment'>//                              ^~~~ changed</span>
+                            <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>recur</span>
+                        };
+
+                        {
+                            <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>mem</span>::<span class='ident'>swap</span>;
+
+                            <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>swap_tmp</span> <span class='op'>=</span> <span class='ident'>next_val</span>;
+                            <span class='kw'>for</span> <span class='ident'>i</span> <span class='kw'>in</span> (<span class='number'>0</span>..<span class='ident'>MEM_SIZE</span>).<span class='ident'>rev</span>() {
+                                <span class='ident'>swap</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>swap_tmp</span>, <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>.<span class='ident'>mem</span>[<span class='ident'>i</span>]);
+                            }
+                        }
+
+                        <span class='self'>self</span>.<span class='ident'>pos</span> <span class='op'>+=</span> <span class='number'>1</span>;
+                        <span class='prelude-val'>Some</span>(<span class='ident'>next_val</span>)
+                    }
+                }
+            }
+
+            <span class='ident'>Recurrence</span> { <span class='ident'>mem</span>: [$(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>inits</span>),<span class='op'>+</span>], <span class='ident'>pos</span>: <span class='number'>0</span> }
+        }
+    };
+}
+
+<span class='kw'>fn</span> <span class='ident'>main</span>() {
+    <span class='kw'>let</span> <span class='ident'>fib</span> <span class='op'>=</span> <span class='macro'>recurrence</span><span class='macro'>!</span>[<span class='ident'>a</span>[<span class='ident'>n</span>]: <span class='ident'>u64</span> <span class='op'>=</span> <span class='number'>0</span>, <span class='number'>1</span> ... <span class='ident'>a</span>[<span class='ident'>n</span><span class='op'>-</span><span class='number'>1</span>] <span class='op'>+</span> <span class='ident'>a</span>[<span class='ident'>n</span><span class='op'>-</span><span class='number'>2</span>]];
+
+    <span class='kw'>for</span> <span class='ident'>e</span> <span class='kw'>in</span> <span class='ident'>fib</span>.<span class='ident'>take</span>(<span class='number'>10</span>) { <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;{}&quot;</span>, <span class='ident'>e</span>) }
+}</pre>
+
+<p>And it compiles!  Now, let&#39;s try with a different sequence.</p>
+<span class='rusttest'>macro_rules! count_exprs {
+    () =&gt; (0);
+    ($head:expr) =&gt; (1);
+    ($head:expr, $($tail:expr),*) =&gt; (1 + count_exprs!($($tail),*));
+}
+
+macro_rules! recurrence {
+    ( $seq:ident [ $ind:ident ]: $sty:ty = $($inits:expr),+ ... $recur:expr ) =&gt; {
+        {
+            use std::ops::Index;
+
+            const MEM_SIZE: usize = count_exprs!($($inits),+);
+
+            struct Recurrence {
+                mem: [$sty; MEM_SIZE],
+                pos: usize,
+            }
+
+            struct IndexOffset&lt;&#39;a&gt; {
+                slice: &amp;&#39;a [$sty; MEM_SIZE],
+                offset: usize,
+            }
+
+            impl&lt;&#39;a&gt; Index&lt;usize&gt; for IndexOffset&lt;&#39;a&gt; {
+                type Output = $sty;
+
+                #[inline(always)]
+                fn index&lt;&#39;b&gt;(&amp;&#39;b self, index: usize) -&gt; &amp;&#39;b $sty {
+                    use std::num::Wrapping;
+
+                    let index = Wrapping(index);
+                    let offset = Wrapping(self.offset);
+                    let window = Wrapping(MEM_SIZE);
+
+                    let real_index = index - offset + window;
+                    &amp;self.slice[real_index.0]
+                }
+            }
+
+            impl Iterator for Recurrence {
+                type Item = $sty;
+
+                #[inline]
+                fn next(&amp;mut self) -&gt; Option&lt;$sty&gt; {
+                    if self.pos &lt; MEM_SIZE {
+                        let next_val = self.mem[self.pos];
+                        self.pos += 1;
+                        Some(next_val)
+                    } else {
+                        let next_val = {
+                            let $ind = self.pos;
+                            let $seq = IndexOffset { slice: &amp;self.mem, offset: $ind };
+                            $recur
+                        };
+
+                        {
+                            use std::mem::swap;
+
+                            let mut swap_tmp = next_val;
+                            for i in (0..MEM_SIZE).rev() {
+                                swap(&amp;mut swap_tmp, &amp;mut self.mem[i]);
+                            }
+                        }
+
+                        self.pos += 1;
+                        Some(next_val)
+                    }
+                }
+            }
+
+            Recurrence { mem: [$($inits),+], pos: 0 }
+        }
+    };
+}
+
+fn main() {
+for e in recurrence!(f[i]: f64 = 1.0 ... f[i-1] * i as f64).take(10) {
+    println!(&quot;{}&quot;, e)
+}
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='kw'>for</span> <span class='ident'>e</span> <span class='kw'>in</span> <span class='macro'>recurrence</span><span class='macro'>!</span>(<span class='ident'>f</span>[<span class='ident'>i</span>]: <span class='ident'>f64</span> <span class='op'>=</span> <span class='number'>1.0</span> ... <span class='ident'>f</span>[<span class='ident'>i</span><span class='op'>-</span><span class='number'>1</span>] <span class='op'>*</span> <span class='ident'>i</span> <span class='kw'>as</span> <span class='ident'>f64</span>).<span class='ident'>take</span>(<span class='number'>10</span>) {
+    <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;{}&quot;</span>, <span class='ident'>e</span>)
+}</pre>
+
+<p>Which gives us:</p>
+
+<pre><code class="language-text">1
+1
+2
+6
+24
+120
+720
+5040
+40320
+362880
+</code></pre>
+
+<p>Success!</p>
+
+    <script type="text/javascript">
+        window.playgroundUrl = "http://play.rust-lang.org";
+    </script>
+    
+<script type="text/javascript">
+document.addEventListener("DOMContentLoaded", function(event) {
+  document.getElementById("toggle-nav").onclick = toggleNav;
+  function toggleNav() {
+    var toc = document.getElementById("toc");
+    var pagewrapper = document.getElementById("page-wrapper");
+    toggleClass(toc, "mobile-hidden");
+    toggleClass(pagewrapper, "mobile-hidden");
+  };
+
+  function toggleClass(el, className) {
+     // from http://youmightnotneedjquery.com/
+     if (el.classList) {
+       el.classList.toggle(className);
+     } else {
+       var classes = el.className.split(' ');
+       var existingIndex = classes.indexOf(className);
+
+       if (existingIndex >= 0) {
+         classes.splice(existingIndex, 1);
+       } else {
+         classes.push(className);
+       }
+
+       el.className = classes.join(' ');
+     }
+  }
+
+  // The below code is used to add prev and next navigation links to the bottom
+  // of each of the sections.
+  // It works by extracting the current page based on the url and iterates over
+  // the menu links until it finds the menu item for the current page. We then
+  // create a copy of the preceding and following menu links and add the
+  // correct css class and insert them into the bottom of the page.
+  var toc = document.getElementById('toc').getElementsByTagName('a');
+  var href = document.location.pathname.split('/').pop();
+  if (href === 'index.html' || href === '') {
+    href = 'README.html';
+  }
+
+  for (var i = 0; i < toc.length; i++) {
+    if (toc[i].attributes['href'].value.split('/').pop() === href) {
+      var nav = document.createElement('p');
+      if (i > 0) {
+        var prevNode = toc[i-1].cloneNode(true);
+        prevNode.className = 'left';
+        prevNode.setAttribute('rel', 'prev');
+        nav.appendChild(prevNode);
+      }
+      if (i < toc.length - 1) {
+        var nextNode = toc[i+1].cloneNode(true);
+        nextNode.className = 'right';
+        nextNode.setAttribute('rel', 'next');
+        nav.appendChild(nextNode);
+      }
+      document.getElementById('page').appendChild(nav);
+      break;
+    }
+  }
+
+});
+</script>
+<script type="text/javascript" src="playpen.js"></script>
+</div></div>
+
+
+</body>
+</html>
