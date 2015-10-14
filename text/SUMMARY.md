@@ -1,6 +1,6 @@
 # Summary
 
-* [Macros](mbe-README.md)
+* [Macros, A Methodical Introduction](mbe-README.md)
     * [Syntax Extensions](mbe-syn-README.md)
         * [Source Analysis](mbe-syn-source-analysis.md)
         * [Macros in the AST](mbe-syn-macros-in-the-ast.md)

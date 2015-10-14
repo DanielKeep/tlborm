@@ -1,4 +1,4 @@
-% Macros
+% Macros, A Methodical Introduction
 
 This chapter will introduce Rust's Macro-By-Example system: `macro_rules!`.  Rather than trying to cover it based on practical examples, it will instead attempt to give you a complete and thorough explanation of *how* the system works.  As such, this is intended for people who just want the system as a whole explained, rather than be guided through it.
 
