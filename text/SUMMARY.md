@@ -23,6 +23,8 @@
     * [TT Bundling](pat-tt-bundling.md)
     * [Provisional](pat-provisional.md)
 * [Building Blocks](blk-README.md)
+    * [AST Coercion](blk-ast-coercion.md)
     * [Counting](blk-counting.md)
+    * [Enum Parsing](blk-enum-parsing.md)
 * [Annotated Examples](aeg-README.md)
     * [Ook!](aeg-ook.md)
