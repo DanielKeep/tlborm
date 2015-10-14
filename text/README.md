@@ -8,4 +8,8 @@ If you wish to contribute, see [the GitHub repository](https://github.com/Daniel
 
 ## Thanks
 
-Thanks to the following for suggestions and corrections: cmr, IcyFoxy.
+Thanks to the following for suggestions and corrections: IcyFoxy, Rym, TheMicroWorm, Yurume, akavel, cmr, ogham, and snake_case.
+
+## License
+
+This work is licensed under both the [Creative Commons Attribution-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-sa/4.0/) and the [MIT license](http://opensource.org/licenses/MIT).

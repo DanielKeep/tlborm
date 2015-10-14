@@ -13,6 +13,7 @@
         * [Debugging](mbe-min-debugging.md)
         * [Scoping](mbe-min-scoping.md)
         * [Import/Export](mbe-min-import-export.md)
+* [Macros, A Practical Introduction](pim-README.md)
 * [Patterns](pat-README.md)
     * [Callbacks](pat-callbacks.md)
     * [Incremental TT Munchers](pat-incremental-tt-munchers.md)
