@@ -23,5 +23,6 @@
     * [TT Bundling](pat-tt-bundling.md)
     * [Provisional](pat-provisional.md)
 * [Building Blocks](blk-README.md)
+    * [Counting](blk-counting.md)
 * [Annotated Examples](aeg-README.md)
     * [Ook!](aeg-ook.md)
