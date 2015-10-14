@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <title>TT Bundling</title>
+
+    <link rel="stylesheet" type="text/css" href="rust-book.css">
+
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    <div id="nav">
+                <button id="toggle-nav">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                </button>
+              </div>
+<div id='toc' class='mobile-hidden'>
+<ul class='chapter'>
+<li><a  href='README.html'><b>1.</b> Introduction</a>
+</li>
+<li><a  href='mbe-README.html'><b>2.</b> Macros</a>
+<ul class='section'>
+<li><a  href='mbe-syn-README.html'><b>2.1.</b> Syntax Extensions</a>
+<ul class='section'>
+<li><a  href='mbe-syn-source-analysis.html'><b>2.1.1.</b> Source Analysis</a>
+</li>
+<li><a  href='mbe-syn-macros-in-the-ast.html'><b>2.1.2.</b> Macros in the AST</a>
+</li>
+<li><a  href='mbe-syn-expansion.html'><b>2.1.3.</b> Expansion</a>
+</li>
+</ul>
+</li>
+<li><a  href='mbe-macro-rules.html'><b>2.2.</b> macro_rules!</a>
+</li>
+<li><a  href='mbe-min-README.html'><b>2.3.</b> Minutiae</a>
+<ul class='section'>
+<li><a  href='mbe-min-captures-and-expansion-redux.html'><b>2.3.1.</b> Captures and Expansion Redux</a>
+</li>
+<li><a  href='mbe-min-hygiene.html'><b>2.3.2.</b> Hygiene</a>
+</li>
+<li><a  href='mbe-min-non-identifier-identifiers.html'><b>2.3.3.</b> Non-Identifier Identifiers</a>
+</li>
+<li><a  href='mbe-min-debugging.html'><b>2.3.4.</b> Debugging</a>
+</li>
+<li><a  href='mbe-min-scoping.html'><b>2.3.5.</b> Scoping</a>
+</li>
+<li><a  href='mbe-min-import-export.html'><b>2.3.6.</b> Import/Export</a>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a  href='pat-README.html'><b>3.</b> Patterns</a>
+<ul class='section'>
+<li><a  href='pat-callbacks.html'><b>3.1.</b> Callbacks</a>
+</li>
+<li><a  href='pat-incremental-tt-munchers.html'><b>3.2.</b> Incremental TT Munchers</a>
+</li>
+<li><a  href='pat-internal-rules.html'><b>3.3.</b> Internal Rules</a>
+</li>
+<li><a  href='pat-push-down-accumulation.html'><b>3.4.</b> Push-Down Accumulation</a>
+</li>
+<li><a  href='pat-repetition-replacement.html'><b>3.5.</b> Repetition Replacement</a>
+</li>
+<li><a  href='pat-trailing-separators.html'><b>3.6.</b> Trailing Separators</a>
+</li>
+<li><a class='active' href='pat-tt-bundling.html'><b>3.7.</b> TT Bundling</a>
+</li>
+<li><a  href='pat-provisional.html'><b>3.8.</b> Provisional</a>
+</li>
+</ul>
+</li>
+<li><a  href='blk-README.html'><b>4.</b> Building Blocks</a>
+<ul class='section'>
+<li><a  href='blk-ast-coercion.html'><b>4.1.</b> AST Coercion</a>
+</li>
+<li><a  href='blk-counting.html'><b>4.2.</b> Counting</a>
+</li>
+<li><a  href='blk-enum-parsing.html'><b>4.3.</b> Enum Parsing</a>
+</li>
+</ul>
+</li>
+<li><a  href='aeg-README.html'><b>5.</b> Annotated Examples</a>
+<ul class='section'>
+<li><a  href='aeg-ook.html'><b>5.1.</b> Ook!</a>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<div id='page-wrapper'>
+<div id='page'>
+
+
+    <h1 class="title">TT Bundling</h1>
+    <span class='rusttest'>macro_rules! call_a_or_b_on_tail {
+    ((a: $a:expr, b: $b:expr), call a: $($tail:tt)*) =&gt; {
+        $a(stringify!($($tail)*))
+    };
+
+    ((a: $a:expr, b: $b:expr), call b: $($tail:tt)*) =&gt; {
+        $b(stringify!($($tail)*))
+    };
+
+    ($ab:tt, $_skip:tt $($tail:tt)*) =&gt; {
+        call_a_or_b_on_tail!($ab, $($tail)*)
+    };
+}
+
+fn compute_len(s: &amp;str) -&gt; Option&lt;usize&gt; {
+    Some(s.len())
+}
+
+fn show_tail(s: &amp;str) -&gt; Option&lt;usize&gt; {
+    println!(&quot;tail: {:?}&quot;, s);
+    None
+}
+
+fn main() {
+    assert_eq!(
+        call_a_or_b_on_tail!(
+            (a: compute_len, b: show_tail),
+            the recursive part that skips over all these
+            tokens doesn&#39;t much care whether we will call a
+            or call b: only the terminal rules care.
+        ),
+        None
+    );
+    assert_eq!(
+        call_a_or_b_on_tail!(
+            (a: compute_len, b: show_tail),
+            and now, to justify the existence of two paths
+            we will also call a: its input should somehow
+            be self-referential, so let&#39;s make it return
+            some ninety one!
+        ),
+        Some(91)
+    );
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>call_a_or_b_on_tail</span> {
+    ((<span class='ident'>a</span>: <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>a</span>:<span class='ident'>expr</span>, <span class='ident'>b</span>: <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>b</span>:<span class='ident'>expr</span>), <span class='ident'>call</span> <span class='ident'>a</span>: $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>=&gt;</span> {
+        <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>a</span>(<span class='macro'>stringify</span><span class='macro'>!</span>($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>)<span class='op'>*</span>))
+    };
+
+    ((<span class='ident'>a</span>: <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>a</span>:<span class='ident'>expr</span>, <span class='ident'>b</span>: <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>b</span>:<span class='ident'>expr</span>), <span class='ident'>call</span> <span class='ident'>b</span>: $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>=&gt;</span> {
+        <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>b</span>(<span class='macro'>stringify</span><span class='macro'>!</span>($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>)<span class='op'>*</span>))
+    };
+
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>ab</span>:<span class='ident'>tt</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>_skip</span>:<span class='ident'>tt</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>=&gt;</span> {
+        <span class='macro'>call_a_or_b_on_tail</span><span class='macro'>!</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>ab</span>, $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>)<span class='op'>*</span>)
+    };
+}
+
+<span class='kw'>fn</span> <span class='ident'>compute_len</span>(<span class='ident'>s</span>: <span class='kw-2'>&amp;</span><span class='ident'>str</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>usize</span><span class='op'>&gt;</span> {
+    <span class='prelude-val'>Some</span>(<span class='ident'>s</span>.<span class='ident'>len</span>())
+}
+
+<span class='kw'>fn</span> <span class='ident'>show_tail</span>(<span class='ident'>s</span>: <span class='kw-2'>&amp;</span><span class='ident'>str</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>usize</span><span class='op'>&gt;</span> {
+    <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;tail: {:?}&quot;</span>, <span class='ident'>s</span>);
+    <span class='prelude-val'>None</span>
+}
+
+<span class='kw'>fn</span> <span class='ident'>main</span>() {
+    <span class='macro'>assert_eq</span><span class='macro'>!</span>(
+        <span class='macro'>call_a_or_b_on_tail</span><span class='macro'>!</span>(
+            (<span class='ident'>a</span>: <span class='ident'>compute_len</span>, <span class='ident'>b</span>: <span class='ident'>show_tail</span>),
+            <span class='ident'>the</span> <span class='ident'>recursive</span> <span class='ident'>part</span> <span class='ident'>that</span> <span class='ident'>skips</span> <span class='ident'>over</span> <span class='ident'>all</span> <span class='ident'>these</span>
+            <span class='ident'>tokens</span> <span class='ident'>doesn</span><span class='lifetime'>&#39;t</span> <span class='ident'>much</span> <span class='ident'>care</span> <span class='ident'>whether</span> <span class='ident'>we</span> <span class='ident'>will</span> <span class='ident'>call</span> <span class='ident'>a</span>
+            <span class='ident'>or</span> <span class='ident'>call</span> <span class='ident'>b</span>: <span class='ident'>only</span> <span class='ident'>the</span> <span class='ident'>terminal</span> <span class='ident'>rules</span> <span class='ident'>care</span>.
+        ),
+        <span class='prelude-val'>None</span>
+    );
+    <span class='macro'>assert_eq</span><span class='macro'>!</span>(
+        <span class='macro'>call_a_or_b_on_tail</span><span class='macro'>!</span>(
+            (<span class='ident'>a</span>: <span class='ident'>compute_len</span>, <span class='ident'>b</span>: <span class='ident'>show_tail</span>),
+            <span class='ident'>and</span> <span class='ident'>now</span>, <span class='ident'>to</span> <span class='ident'>justify</span> <span class='ident'>the</span> <span class='ident'>existence</span> <span class='ident'>of</span> <span class='ident'>two</span> <span class='ident'>paths</span>
+            <span class='ident'>we</span> <span class='ident'>will</span> <span class='ident'>also</span> <span class='ident'>call</span> <span class='ident'>a</span>: <span class='ident'>its</span> <span class='ident'>input</span> <span class='ident'>should</span> <span class='ident'>somehow</span>
+            <span class='ident'>be</span> <span class='self'>self</span><span class='op'>-</span><span class='ident'>referential</span>, <span class='ident'>so</span> <span class='kw'>let</span><span class='lifetime'>&#39;s</span> <span class='ident'>make</span> <span class='ident'>it</span> <span class='kw'>return</span>
+            <span class='ident'>some</span> <span class='ident'>ninety</span> <span class='macro'>one</span><span class='macro'>!</span>
+        ),
+        <span class='prelude-val'>Some</span>(<span class='number'>91</span>)
+    );
+}</pre>
+
+<p>In particularly complex recursive macros, a large number of arguments may be needed in order to carry identifiers and expressions to successive layers.  However, depending on the implementation there may be many intermediate layers which need to forward these arguments, but do not need to <em>use</em> them.</p>
+
+<p>As such, it can be very useful to bundle all such arguments together into a single TT by placing them in a group.  This allows layers which do not need to use the arguments to simply capture and substitute a single <code>tt</code>, rather than having to exactly capture and substitute the entire argument group.</p>
+
+<p>The example above bundles the <code>$a</code> and <code>$b</code> expressions into a group which can then be forwarded as a single <code>tt</code> by the recursive rule.  This group is then destructured by the terminal rules to access the expressions.</p>
+
+    <script type="text/javascript">
+        window.playgroundUrl = "http://play.rust-lang.org";
+    </script>
+    
+<script type="text/javascript">
+document.addEventListener("DOMContentLoaded", function(event) {
+  document.getElementById("toggle-nav").onclick = toggleNav;
+  function toggleNav() {
+    var toc = document.getElementById("toc");
+    var pagewrapper = document.getElementById("page-wrapper");
+    toggleClass(toc, "mobile-hidden");
+    toggleClass(pagewrapper, "mobile-hidden");
+  };
+
+  function toggleClass(el, className) {
+     // from http://youmightnotneedjquery.com/
+     if (el.classList) {
+       el.classList.toggle(className);
+     } else {
+       var classes = el.className.split(' ');
+       var existingIndex = classes.indexOf(className);
+
+       if (existingIndex >= 0) {
+         classes.splice(existingIndex, 1);
+       } else {
+         classes.push(className);
+       }
+
+       el.className = classes.join(' ');
+     }
+  }
+
+  // The below code is used to add prev and next navigation links to the bottom
+  // of each of the sections.
+  // It works by extracting the current page based on the url and iterates over
+  // the menu links until it finds the menu item for the current page. We then
+  // create a copy of the preceding and following menu links and add the
+  // correct css class and insert them into the bottom of the page.
+  var toc = document.getElementById('toc').getElementsByTagName('a');
+  var href = document.location.pathname.split('/').pop();
+  if (href === 'index.html' || href === '') {
+    href = 'README.html';
+  }
+
+  for (var i = 0; i < toc.length; i++) {
+    if (toc[i].attributes['href'].value.split('/').pop() === href) {
+      var nav = document.createElement('p');
+      if (i > 0) {
+        var prevNode = toc[i-1].cloneNode(true);
+        prevNode.className = 'left';
+        prevNode.setAttribute('rel', 'prev');
+        nav.appendChild(prevNode);
+      }
+      if (i < toc.length - 1) {
+        var nextNode = toc[i+1].cloneNode(true);
+        nextNode.className = 'right';
+        nextNode.setAttribute('rel', 'next');
+        nav.appendChild(nextNode);
+      }
+      document.getElementById('page').appendChild(nav);
+      break;
+    }
+  }
+
+});
+</script>
+<script type="text/javascript" src="playpen.js"></script>
+</div></div>
+
+
+</body>
+</html>

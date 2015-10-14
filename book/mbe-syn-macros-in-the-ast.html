@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <title>Macros in the AST</title>
+
+    <link rel="stylesheet" type="text/css" href="rust-book.css">
+
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    <div id="nav">
+                <button id="toggle-nav">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                </button>
+              </div>
+<div id='toc' class='mobile-hidden'>
+<ul class='chapter'>
+<li><a  href='README.html'><b>1.</b> Introduction</a>
+</li>
+<li><a  href='mbe-README.html'><b>2.</b> Macros</a>
+<ul class='section'>
+<li><a  href='mbe-syn-README.html'><b>2.1.</b> Syntax Extensions</a>
+<ul class='section'>
+<li><a  href='mbe-syn-source-analysis.html'><b>2.1.1.</b> Source Analysis</a>
+</li>
+<li><a class='active' href='mbe-syn-macros-in-the-ast.html'><b>2.1.2.</b> Macros in the AST</a>
+</li>
+<li><a  href='mbe-syn-expansion.html'><b>2.1.3.</b> Expansion</a>
+</li>
+</ul>
+</li>
+<li><a  href='mbe-macro-rules.html'><b>2.2.</b> macro_rules!</a>
+</li>
+<li><a  href='mbe-min-README.html'><b>2.3.</b> Minutiae</a>
+<ul class='section'>
+<li><a  href='mbe-min-captures-and-expansion-redux.html'><b>2.3.1.</b> Captures and Expansion Redux</a>
+</li>
+<li><a  href='mbe-min-hygiene.html'><b>2.3.2.</b> Hygiene</a>
+</li>
+<li><a  href='mbe-min-non-identifier-identifiers.html'><b>2.3.3.</b> Non-Identifier Identifiers</a>
+</li>
+<li><a  href='mbe-min-debugging.html'><b>2.3.4.</b> Debugging</a>
+</li>
+<li><a  href='mbe-min-scoping.html'><b>2.3.5.</b> Scoping</a>
+</li>
+<li><a  href='mbe-min-import-export.html'><b>2.3.6.</b> Import/Export</a>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a  href='pat-README.html'><b>3.</b> Patterns</a>
+<ul class='section'>
+<li><a  href='pat-callbacks.html'><b>3.1.</b> Callbacks</a>
+</li>
+<li><a  href='pat-incremental-tt-munchers.html'><b>3.2.</b> Incremental TT Munchers</a>
+</li>
+<li><a  href='pat-internal-rules.html'><b>3.3.</b> Internal Rules</a>
+</li>
+<li><a  href='pat-push-down-accumulation.html'><b>3.4.</b> Push-Down Accumulation</a>
+</li>
+<li><a  href='pat-repetition-replacement.html'><b>3.5.</b> Repetition Replacement</a>
+</li>
+<li><a  href='pat-trailing-separators.html'><b>3.6.</b> Trailing Separators</a>
+</li>
+<li><a  href='pat-tt-bundling.html'><b>3.7.</b> TT Bundling</a>
+</li>
+<li><a  href='pat-provisional.html'><b>3.8.</b> Provisional</a>
+</li>
+</ul>
+</li>
+<li><a  href='blk-README.html'><b>4.</b> Building Blocks</a>
+<ul class='section'>
+<li><a  href='blk-ast-coercion.html'><b>4.1.</b> AST Coercion</a>
+</li>
+<li><a  href='blk-counting.html'><b>4.2.</b> Counting</a>
+</li>
+<li><a  href='blk-enum-parsing.html'><b>4.3.</b> Enum Parsing</a>
+</li>
+</ul>
+</li>
+<li><a  href='aeg-README.html'><b>5.</b> Annotated Examples</a>
+<ul class='section'>
+<li><a  href='aeg-ook.html'><b>5.1.</b> Ook!</a>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<div id='page-wrapper'>
+<div id='page'>
+
+
+    <h1 class="title">Macros in the AST</h1>
+    <p>As previously mentioned, macro processing in Rust happens <em>after</em> the construction of the AST.  As such, the syntax used to invoke a macro <em>must</em> be a proper part of the language&#39;s syntax.  In fact, there are several &quot;syntax extension&quot; forms which are part of Rust&#39;s syntax.  Specifically, the following forms (by way of examples):</p>
+
+<ul>
+<li><code># [ $arg ]</code>; <em>e.g.</em> <code>#[derive(Clone)]</code>, <code>#[no_mangle]</code>, …</li>
+<li><code># ! [ $arg ]</code>; <em>e.g.</em> <code>#![allow(dead_code)]</code>, <code>#![crate_name=&quot;blang&quot;]</code>, …</li>
+<li><code>$name ! $arg</code>; <em>e.g.</em> <code>println!(&quot;Hi!&quot;)</code>, <code>concat!(&quot;a&quot;, &quot;b&quot;)</code>, …</li>
+<li><code>$name ! $arg0 $arg1</code>; <em>e.g.</em> <code>macro_rules! dummy { () =&gt; {}; }</code>.</li>
+</ul>
+
+<p>The first two are &quot;attributes&quot;, and are shared between both language-specific constructs (such as <code>#[repr(C)]</code> which is used to request a C-compatible ABI for user-defined types) and syntax extensions (such as <code>#[derive(Clone)]</code>).  There is currently no way to define a macro that uses these forms.</p>
+
+<p>The third is the one of interest to us: it is the form available for use with macros.  Note that this form is not <em>limited</em> to macros: it is a generic syntax extension form.  For example, whilst <code>format!</code> is a macro, <code>format_args!</code> (which is used to <em>implement</em> <code>format!</code>) is <em>not</em>.</p>
+
+<p>The fourth is essentially a variation which is <em>not</em> available to macros.  In fact, the only case where this form is used <em>at all</em> is with <code>macro_rules!</code> which, again we will come back to.</p>
+
+<p>Disregarding all but the third form (<code>$name ! $arg</code>), the question becomes: how does the Rust parser know what <code>$arg</code> looks like for every possible syntax extension?  The answer is that it doesn&#39;t <em>have to</em>.  Instead, the argument of a syntax extension invocation is a <em>single</em> token tree.  More specifically, it is a single, <em>non-leaf</em> token tree; <code>(...)</code>, <code>[...]</code>, or <code>{...}</code>.  With that knowledge, it should become apparent how the parser can understand all of the following invocation forms:</p>
+<span class='rusttest'>bitflags! {
+    flags Color: u8 {
+        const RED    = 0b0001,
+        const GREEN  = 0b0010,
+        const BLUE   = 0b0100,
+        const BRIGHT = 0b1000,
+    }
+}
+
+lazy_static! {
+    static ref FIB_100: u32 = {
+        fn fib(a: u32) -&gt; u32 {
+            match a {
+                0 =&gt; 0,
+                1 =&gt; 1,
+                a =&gt; fib(a-1) + fib(a-2)
+            }
+        }
+
+        fib(100)
+    };
+}
+
+fn main() {
+    let colors = vec![RED, GREEN, BLUE];
+    println!(&quot;Hello, World!&quot;);
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>bitflags</span><span class='macro'>!</span> {
+    <span class='ident'>flags</span> <span class='ident'>Color</span>: <span class='ident'>u8</span> {
+        <span class='kw'>const</span> <span class='ident'>RED</span>    <span class='op'>=</span> <span class='number'>0b0001</span>,
+        <span class='kw'>const</span> <span class='ident'>GREEN</span>  <span class='op'>=</span> <span class='number'>0b0010</span>,
+        <span class='kw'>const</span> <span class='ident'>BLUE</span>   <span class='op'>=</span> <span class='number'>0b0100</span>,
+        <span class='kw'>const</span> <span class='ident'>BRIGHT</span> <span class='op'>=</span> <span class='number'>0b1000</span>,
+    }
+}
+
+<span class='macro'>lazy_static</span><span class='macro'>!</span> {
+    <span class='kw'>static</span> <span class='kw-2'>ref</span> <span class='ident'>FIB_100</span>: <span class='ident'>u32</span> <span class='op'>=</span> {
+        <span class='kw'>fn</span> <span class='ident'>fib</span>(<span class='ident'>a</span>: <span class='ident'>u32</span>) <span class='op'>-&gt;</span> <span class='ident'>u32</span> {
+            <span class='kw'>match</span> <span class='ident'>a</span> {
+                <span class='number'>0</span> <span class='op'>=&gt;</span> <span class='number'>0</span>,
+                <span class='number'>1</span> <span class='op'>=&gt;</span> <span class='number'>1</span>,
+                <span class='ident'>a</span> <span class='op'>=&gt;</span> <span class='ident'>fib</span>(<span class='ident'>a</span><span class='op'>-</span><span class='number'>1</span>) <span class='op'>+</span> <span class='ident'>fib</span>(<span class='ident'>a</span><span class='op'>-</span><span class='number'>2</span>)
+            }
+        }
+
+        <span class='ident'>fib</span>(<span class='number'>100</span>)
+    };
+}
+
+<span class='kw'>fn</span> <span class='ident'>main</span>() {
+    <span class='kw'>let</span> <span class='ident'>colors</span> <span class='op'>=</span> <span class='macro'>vec</span><span class='macro'>!</span>[<span class='ident'>RED</span>, <span class='ident'>GREEN</span>, <span class='ident'>BLUE</span>];
+    <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;Hello, World!&quot;</span>);
+}</pre>
+
+<p>Although the above invocations may <em>look</em> like they contain various kinds of Rust code, the parser simply sees a collection of meaningless token trees.  To make this clearer, we can replace all these syntactic &quot;black boxes&quot; with ⬚, leaving us with:</p>
+
+<pre><code class="language-text">bitflags! ⬚
+
+lazy_static! ⬚
+
+fn main() {
+    let colors = vec! ⬚;
+    println! ⬚;
+}
+</code></pre>
+
+<p>Just to reiterate: the parser does not assume <em>anything</em> about ⬚; it remembers the tokens it contains, but doesn&#39;t try to <em>understand</em> them.</p>
+
+<p>The important takeaways are:</p>
+
+<ul>
+<li>There are multiple kinds of syntax extension in Rust.  We will <em>only</em> be talking about macros defined by the <code>macro_rules!</code> construct.</li>
+<li>Just because you see something of the form <code>$name! $arg</code>, doesn&#39;t mean it&#39;s actually a macro; it might be another kind of syntax extension.</li>
+<li>The input to every macro is a single non-leaf token tree.</li>
+<li>Macros (really, syntax extensions in general) are parsed as <em>part</em> of the abstract syntax tree.</li>
+</ul>
+
+<blockquote>
+<p><strong>Aside</strong>: due to the first point, some of what will be said below (including the next paragraph) will apply to syntax extensions <em>in general</em>.<sup id="fnref1"><a href="#fn1" rel="footnote">1</a></sup></p>
+</blockquote>
+
+<p>The last point is the most important, as it has <em>significant</em> implications.  Because macros are parsed into the AST, they can <strong>only</strong> appear in positions where they are explicitly supported.  Specifically macros can appear in place of the following:</p>
+
+<ul>
+<li>Patterns</li>
+<li>Statements</li>
+<li>Expressions</li>
+<li>Items</li>
+<li><code>impl</code> Items</li>
+</ul>
+
+<p>Some things <em>not</em> on this list:</p>
+
+<ul>
+<li>Identifiers</li>
+<li>Match arms</li>
+<li>Struct fields</li>
+<li>Types</li>
+</ul>
+
+<p>There is absolutely, definitely <em>no way</em> to use macros in any position <em>not</em> on the first list.</p>
+
+<div class="footnotes">
+<hr>
+<ol>
+
+<li id="fn1">
+<p>This is rather convenient as &quot;macro&quot; is much quicker and easier to type than &quot;syntax extension&quot;.&nbsp;<a href="#fnref1" rev="footnote">&#8617;</a></p>
+</li>
+
+</ol>
+</div>
+
+    <script type="text/javascript">
+        window.playgroundUrl = "http://play.rust-lang.org";
+    </script>
+    
+<script type="text/javascript">
+document.addEventListener("DOMContentLoaded", function(event) {
+  document.getElementById("toggle-nav").onclick = toggleNav;
+  function toggleNav() {
+    var toc = document.getElementById("toc");
+    var pagewrapper = document.getElementById("page-wrapper");
+    toggleClass(toc, "mobile-hidden");
+    toggleClass(pagewrapper, "mobile-hidden");
+  };
+
+  function toggleClass(el, className) {
+     // from http://youmightnotneedjquery.com/
+     if (el.classList) {
+       el.classList.toggle(className);
+     } else {
+       var classes = el.className.split(' ');
+       var existingIndex = classes.indexOf(className);
+
+       if (existingIndex >= 0) {
+         classes.splice(existingIndex, 1);
+       } else {
+         classes.push(className);
+       }
+
+       el.className = classes.join(' ');
+     }
+  }
+
+  // The below code is used to add prev and next navigation links to the bottom
+  // of each of the sections.
+  // It works by extracting the current page based on the url and iterates over
+  // the menu links until it finds the menu item for the current page. We then
+  // create a copy of the preceding and following menu links and add the
+  // correct css class and insert them into the bottom of the page.
+  var toc = document.getElementById('toc').getElementsByTagName('a');
+  var href = document.location.pathname.split('/').pop();
+  if (href === 'index.html' || href === '') {
+    href = 'README.html';
+  }
+
+  for (var i = 0; i < toc.length; i++) {
+    if (toc[i].attributes['href'].value.split('/').pop() === href) {
+      var nav = document.createElement('p');
+      if (i > 0) {
+        var prevNode = toc[i-1].cloneNode(true);
+        prevNode.className = 'left';
+        prevNode.setAttribute('rel', 'prev');
+        nav.appendChild(prevNode);
+      }
+      if (i < toc.length - 1) {
+        var nextNode = toc[i+1].cloneNode(true);
+        nextNode.className = 'right';
+        nextNode.setAttribute('rel', 'next');
+        nav.appendChild(nextNode);
+      }
+      document.getElementById('page').appendChild(nav);
+      break;
+    }
+  }
+
+});
+</script>
+<script type="text/javascript" src="playpen.js"></script>
+</div></div>
+
+
+</body>
+</html>

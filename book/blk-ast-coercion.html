@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <title>AST Coercion</title>
+
+    <link rel="stylesheet" type="text/css" href="rust-book.css">
+
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    <div id="nav">
+                <button id="toggle-nav">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                </button>
+              </div>
+<div id='toc' class='mobile-hidden'>
+<ul class='chapter'>
+<li><a  href='README.html'><b>1.</b> Introduction</a>
+</li>
+<li><a  href='mbe-README.html'><b>2.</b> Macros</a>
+<ul class='section'>
+<li><a  href='mbe-syn-README.html'><b>2.1.</b> Syntax Extensions</a>
+<ul class='section'>
+<li><a  href='mbe-syn-source-analysis.html'><b>2.1.1.</b> Source Analysis</a>
+</li>
+<li><a  href='mbe-syn-macros-in-the-ast.html'><b>2.1.2.</b> Macros in the AST</a>
+</li>
+<li><a  href='mbe-syn-expansion.html'><b>2.1.3.</b> Expansion</a>
+</li>
+</ul>
+</li>
+<li><a  href='mbe-macro-rules.html'><b>2.2.</b> macro_rules!</a>
+</li>
+<li><a  href='mbe-min-README.html'><b>2.3.</b> Minutiae</a>
+<ul class='section'>
+<li><a  href='mbe-min-captures-and-expansion-redux.html'><b>2.3.1.</b> Captures and Expansion Redux</a>
+</li>
+<li><a  href='mbe-min-hygiene.html'><b>2.3.2.</b> Hygiene</a>
+</li>
+<li><a  href='mbe-min-non-identifier-identifiers.html'><b>2.3.3.</b> Non-Identifier Identifiers</a>
+</li>
+<li><a  href='mbe-min-debugging.html'><b>2.3.4.</b> Debugging</a>
+</li>
+<li><a  href='mbe-min-scoping.html'><b>2.3.5.</b> Scoping</a>
+</li>
+<li><a  href='mbe-min-import-export.html'><b>2.3.6.</b> Import/Export</a>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a  href='pat-README.html'><b>3.</b> Patterns</a>
+<ul class='section'>
+<li><a  href='pat-callbacks.html'><b>3.1.</b> Callbacks</a>
+</li>
+<li><a  href='pat-incremental-tt-munchers.html'><b>3.2.</b> Incremental TT Munchers</a>
+</li>
+<li><a  href='pat-internal-rules.html'><b>3.3.</b> Internal Rules</a>
+</li>
+<li><a  href='pat-push-down-accumulation.html'><b>3.4.</b> Push-Down Accumulation</a>
+</li>
+<li><a  href='pat-repetition-replacement.html'><b>3.5.</b> Repetition Replacement</a>
+</li>
+<li><a  href='pat-trailing-separators.html'><b>3.6.</b> Trailing Separators</a>
+</li>
+<li><a  href='pat-tt-bundling.html'><b>3.7.</b> TT Bundling</a>
+</li>
+<li><a  href='pat-provisional.html'><b>3.8.</b> Provisional</a>
+</li>
+</ul>
+</li>
+<li><a  href='blk-README.html'><b>4.</b> Building Blocks</a>
+<ul class='section'>
+<li><a class='active' href='blk-ast-coercion.html'><b>4.1.</b> AST Coercion</a>
+</li>
+<li><a  href='blk-counting.html'><b>4.2.</b> Counting</a>
+</li>
+<li><a  href='blk-enum-parsing.html'><b>4.3.</b> Enum Parsing</a>
+</li>
+</ul>
+</li>
+<li><a  href='aeg-README.html'><b>5.</b> Annotated Examples</a>
+<ul class='section'>
+<li><a  href='aeg-ook.html'><b>5.1.</b> Ook!</a>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<div id='page-wrapper'>
+<div id='page'>
+
+
+    <h1 class="title">AST Coercion</h1>
+    <p>The Rust parser is not very robust in the face of <code>tt</code> substitutions.  Problems can arise when the parser is expecting a particular grammar construct and <em>instead</em> finds a lump of substituted <code>tt</code> tokens.  Rather than attempt to parse them, it will often just <em>give up</em>.  In these cases, it is necessary to employ an AST coercion.</p>
+<span class='rusttest'>#![allow(dead_code)]
+
+macro_rules! as_expr { ($e:expr) =&gt; {$e} }
+macro_rules! as_item { ($i:item) =&gt; {$i} }
+macro_rules! as_pat  { ($p:pat) =&gt;  {$p} }
+macro_rules! as_stmt { ($s:stmt) =&gt; {$s} }
+
+as_item!{struct Dummy;}
+
+fn main() {
+    as_stmt!(let as_pat!(_) = as_expr!(42));
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>as_expr</span> { (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> {<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>} }
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>as_item</span> { (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>:<span class='ident'>item</span>) <span class='op'>=&gt;</span> {<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>} }
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>as_pat</span>  { (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>p</span>:<span class='ident'>pat</span>) <span class='op'>=&gt;</span>  {<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>p</span>} }
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>as_stmt</span> { (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>s</span>:<span class='ident'>stmt</span>) <span class='op'>=&gt;</span> {<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>s</span>} }</pre>
+
+<p>These coercions are often used with <a href="pat-push-down-accumulation.html">push-down accumulation</a> macros in order to get the parser to treat the final <code>tt</code> sequence as a particular kind of grammar construct.</p>
+
+<p>Note that this specific set of macros is determined by what macros are allowed to expand to, <em>not</em> what they are able to capture.  That is, because macros cannot appear in type position<sup id="fnref1"><a href="#fn1" rel="footnote">1</a></sup>, you cannot have an <code>as_ty!</code> macro.</p>
+
+<div class="footnotes">
+<hr>
+<ol>
+
+<li id="fn1">
+<p>See <a href="https://github.com/rust-lang/rust/issues/27336">Issue #27336</a>.&nbsp;<a href="#fnref1" rev="footnote">&#8617;</a></p>
+</li>
+
+</ol>
+</div>
+
+    <script type="text/javascript">
+        window.playgroundUrl = "http://play.rust-lang.org";
+    </script>
+    
+<script type="text/javascript">
+document.addEventListener("DOMContentLoaded", function(event) {
+  document.getElementById("toggle-nav").onclick = toggleNav;
+  function toggleNav() {
+    var toc = document.getElementById("toc");
+    var pagewrapper = document.getElementById("page-wrapper");
+    toggleClass(toc, "mobile-hidden");
+    toggleClass(pagewrapper, "mobile-hidden");
+  };
+
+  function toggleClass(el, className) {
+     // from http://youmightnotneedjquery.com/
+     if (el.classList) {
+       el.classList.toggle(className);
+     } else {
+       var classes = el.className.split(' ');
+       var existingIndex = classes.indexOf(className);
+
+       if (existingIndex >= 0) {
+         classes.splice(existingIndex, 1);
+       } else {
+         classes.push(className);
+       }
+
+       el.className = classes.join(' ');
+     }
+  }
+
+  // The below code is used to add prev and next navigation links to the bottom
+  // of each of the sections.
+  // It works by extracting the current page based on the url and iterates over
+  // the menu links until it finds the menu item for the current page. We then
+  // create a copy of the preceding and following menu links and add the
+  // correct css class and insert them into the bottom of the page.
+  var toc = document.getElementById('toc').getElementsByTagName('a');
+  var href = document.location.pathname.split('/').pop();
+  if (href === 'index.html' || href === '') {
+    href = 'README.html';
+  }
+
+  for (var i = 0; i < toc.length; i++) {
+    if (toc[i].attributes['href'].value.split('/').pop() === href) {
+      var nav = document.createElement('p');
+      if (i > 0) {
+        var prevNode = toc[i-1].cloneNode(true);
+        prevNode.className = 'left';
+        prevNode.setAttribute('rel', 'prev');
+        nav.appendChild(prevNode);
+      }
+      if (i < toc.length - 1) {
+        var nextNode = toc[i+1].cloneNode(true);
+        nextNode.className = 'right';
+        nextNode.setAttribute('rel', 'next');
+        nav.appendChild(nextNode);
+      }
+      document.getElementById('page').appendChild(nav);
+      break;
+    }
+  }
+
+});
+</script>
+<script type="text/javascript" src="playpen.js"></script>
+</div></div>
+
+
+</body>
+</html>

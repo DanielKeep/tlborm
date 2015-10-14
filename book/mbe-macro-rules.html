@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <title>macro_rules!</title>
+
+    <link rel="stylesheet" type="text/css" href="rust-book.css">
+
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    <div id="nav">
+                <button id="toggle-nav">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                </button>
+              </div>
+<div id='toc' class='mobile-hidden'>
+<ul class='chapter'>
+<li><a  href='README.html'><b>1.</b> Introduction</a>
+</li>
+<li><a  href='mbe-README.html'><b>2.</b> Macros</a>
+<ul class='section'>
+<li><a  href='mbe-syn-README.html'><b>2.1.</b> Syntax Extensions</a>
+<ul class='section'>
+<li><a  href='mbe-syn-source-analysis.html'><b>2.1.1.</b> Source Analysis</a>
+</li>
+<li><a  href='mbe-syn-macros-in-the-ast.html'><b>2.1.2.</b> Macros in the AST</a>
+</li>
+<li><a  href='mbe-syn-expansion.html'><b>2.1.3.</b> Expansion</a>
+</li>
+</ul>
+</li>
+<li><a class='active' href='mbe-macro-rules.html'><b>2.2.</b> macro_rules!</a>
+</li>
+<li><a  href='mbe-min-README.html'><b>2.3.</b> Minutiae</a>
+<ul class='section'>
+<li><a  href='mbe-min-captures-and-expansion-redux.html'><b>2.3.1.</b> Captures and Expansion Redux</a>
+</li>
+<li><a  href='mbe-min-hygiene.html'><b>2.3.2.</b> Hygiene</a>
+</li>
+<li><a  href='mbe-min-non-identifier-identifiers.html'><b>2.3.3.</b> Non-Identifier Identifiers</a>
+</li>
+<li><a  href='mbe-min-debugging.html'><b>2.3.4.</b> Debugging</a>
+</li>
+<li><a  href='mbe-min-scoping.html'><b>2.3.5.</b> Scoping</a>
+</li>
+<li><a  href='mbe-min-import-export.html'><b>2.3.6.</b> Import/Export</a>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a  href='pat-README.html'><b>3.</b> Patterns</a>
+<ul class='section'>
+<li><a  href='pat-callbacks.html'><b>3.1.</b> Callbacks</a>
+</li>
+<li><a  href='pat-incremental-tt-munchers.html'><b>3.2.</b> Incremental TT Munchers</a>
+</li>
+<li><a  href='pat-internal-rules.html'><b>3.3.</b> Internal Rules</a>
+</li>
+<li><a  href='pat-push-down-accumulation.html'><b>3.4.</b> Push-Down Accumulation</a>
+</li>
+<li><a  href='pat-repetition-replacement.html'><b>3.5.</b> Repetition Replacement</a>
+</li>
+<li><a  href='pat-trailing-separators.html'><b>3.6.</b> Trailing Separators</a>
+</li>
+<li><a  href='pat-tt-bundling.html'><b>3.7.</b> TT Bundling</a>
+</li>
+<li><a  href='pat-provisional.html'><b>3.8.</b> Provisional</a>
+</li>
+</ul>
+</li>
+<li><a  href='blk-README.html'><b>4.</b> Building Blocks</a>
+<ul class='section'>
+<li><a  href='blk-ast-coercion.html'><b>4.1.</b> AST Coercion</a>
+</li>
+<li><a  href='blk-counting.html'><b>4.2.</b> Counting</a>
+</li>
+<li><a  href='blk-enum-parsing.html'><b>4.3.</b> Enum Parsing</a>
+</li>
+</ul>
+</li>
+<li><a  href='aeg-README.html'><b>5.</b> Annotated Examples</a>
+<ul class='section'>
+<li><a  href='aeg-ook.html'><b>5.1.</b> Ook!</a>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<div id='page-wrapper'>
+<div id='page'>
+
+
+    <h1 class="title">macro_rules!</h1>
+    <p>With all that in mind, we can introduce <code>macro_rules!</code> itself.  As noted previously, <code>macro_rules!</code> is <em>itself</em> a syntax extension, meaning it is <em>technically</em> not part of the Rust syntax.  It uses the following form:</p>
+<span class='rusttest'>fn main() {
+    macro_rules! $name {
+        $rule0 ;
+        $rule1 ;
+        // …
+        $ruleN ;
+    }
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>name</span> {
+    <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>rule0</span> ;
+    <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>rule1</span> ;
+    <span class='comment'>// …</span>
+    <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>ruleN</span> ;
+}</pre>
+
+<p>There must be <em>at least</em> one rule, and you can omit the semicolon after the last rule.</p>
+
+<p>Each &quot;<code>rule</code>&quot; looks like so:</p>
+<span class='rusttest'>fn main() {
+        ($pattern) =&gt; {$expansion}
+    
+}</span><pre class='rust rust-example-rendered'>
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>pattern</span>) <span class='op'>=&gt;</span> {<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>expansion</span>}</pre>
+
+<p>Actually, the parens and braces can be any kind of group, but parens around the pattern and braces around the expansion are somewhat conventional.</p>
+
+<p>If you are wondering, the <code>macro_rules!</code> invocation expands to... <em>nothing</em>.  At least, nothing that appears in the AST; rather, it manipulates compiler-internal structures to register the macro.  As such, you can <em>technically</em> use <code>macro_rules!</code> in any position where an empty expansion is valid.</p>
+
+<h2 id="matching" class='section-header'><a
+                           href="#matching">Matching</a></h2>
+<p>When a macro is invoked, the <code>macro_rules!</code> interpreter goes through the rules one by one, in lexical order.  For each rule, it tries to match the contents of the input token tree against that rule&#39;s <code>pattern</code>.  A pattern must match the <em>entirety</em> of the input to be considered a match.</p>
+
+<p>If the input matches the pattern, the invocation is replaced by the <code>expansion</code>; otherwise, the next rule is tried.  If all rules fail to match, macro expansion fails with an error.</p>
+
+<p>The simplest example is of an empty pattern:</p>
+<span class='rusttest'>fn main() {
+    macro_rules! four {
+        () =&gt; {1 + 3};
+    }
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>four</span> {
+    () <span class='op'>=&gt;</span> {<span class='number'>1</span> <span class='op'>+</span> <span class='number'>3</span>};
+}</pre>
+
+<p>This matches if and only if the input is also empty (<em>i.e.</em> <code>four!()</code>, <code>four![]</code> or <code>four!{}</code>).</p>
+
+<p>Note that the specific grouping tokens you use when you invoke the macro <em>are not</em> matched.  That is, you can invoke the above macro as <code>four![]</code> and it will still match.  Only the <em>contents</em> of the input token tree are considered.</p>
+
+<p>Patterns can also contain literal token trees, which must be matched exactly.  This is done by simply writing the token trees normally.  For example, to match the sequence <code>4 fn [&#39;spang &quot;whammo&quot;] @_@</code>, you would use:</p>
+<span class='rusttest'>fn main() {
+    macro_rules! gibberish {
+        (4 fn [&#39;spang &quot;whammo&quot;] @_@) =&gt; {...};
+    }
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>gibberish</span> {
+    (<span class='number'>4</span> <span class='kw'>fn</span> [<span class='lifetime'>&#39;spang</span> <span class='string'>&quot;whammo&quot;</span>] <span class='kw-2'>@</span>_<span class='kw-2'>@</span>) <span class='op'>=&gt;</span> {...};
+}</pre>
+
+<p>You can use any token tree that you can write.</p>
+
+<h2 id="captures" class='section-header'><a
+                           href="#captures">Captures</a></h2>
+<p>Patterns can also contain captures.  These allow input to be matched based on some general grammar category, with the result captured to a variable which can then be substituted into the output.</p>
+
+<p>Captures are written as a dollar (<code>$</code>) followed by an identifier, a colon (<code>:</code>), and finally the kind of capture, which must be one of the following:</p>
+
+<ul>
+<li><code>item</code>: an item, like a function, struct, module, etc.</li>
+<li><code>block</code>: a block (i.e. a block of statments and/or an expression, surrounded by braces)</li>
+<li><code>stmt</code>: a statement</li>
+<li><code>pat</code>: a pattern</li>
+<li><code>expr</code>: an expression</li>
+<li><code>ty</code>: a type</li>
+<li><code>ident</code>: an identifier</li>
+<li><code>path</code>: a path (e.g. <code>foo</code>, <code>::std::mem::replace</code>, <code>transmute::&lt;_, int&gt;</code>, …)</li>
+<li><code>meta</code>: a meta item; the things that go inside <code>#[...]</code> and <code>#![...]</code> attributes</li>
+<li><code>tt</code>: a single token tree</li>
+</ul>
+
+<p>For example, here is a macro which captures its input as an expression:</p>
+<span class='rusttest'>fn main() {
+    macro_rules! one_expression {
+        ($e:expr) =&gt; {...};
+    }
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>one_expression</span> {
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> {...};
+}</pre>
+
+<p>These captures leverage the Rust compiler&#39;s parser, ensuring that they are always &quot;correct&quot;.  An <code>expr</code> capture will <em>always</em> capture a complete, valid expression for the version of Rust being compiled.</p>
+
+<p>You can mix literal token trees and captures, within limits (explained below).</p>
+
+<p>A capture <code>$name:kind</code> can be substituted into the expansion by writing <code>$name</code>.  For example:</p>
+<span class='rusttest'>fn main() {
+    macro_rules! times_five {
+        ($e:expr) =&gt; {5 * $e};
+    }
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>times_five</span> {
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> {<span class='number'>5</span> <span class='op'>*</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>};
+}</pre>
+
+<p>Much like macro expansion, captures are substituted as complete AST nodes.  This means that no matter what sequence of tokens is captured by <code>$e</code>, it will be interpreted as a single, complete expression.</p>
+
+<p>You can also have multiple captures in a single pattern:</p>
+<span class='rusttest'>fn main() {
+    macro_rules! multiply_add {
+        ($a:expr, $b:expr, $c:expr) =&gt; {$a * ($b + $c)};
+    }
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>multiply_add</span> {
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>a</span>:<span class='ident'>expr</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>b</span>:<span class='ident'>expr</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>c</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> {<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>a</span> <span class='op'>*</span> (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>b</span> <span class='op'>+</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>c</span>)};
+}</pre>
+
+<h2 id="repetitions" class='section-header'><a
+                           href="#repetitions">Repetitions</a></h2>
+<p>Patterns can contain repetitions.  These allow a sequence of tokens to be matched.  These have the general form <code>$ ( ... ) sep rep</code>.</p>
+
+<ul>
+<li><code>$</code> is a literal dollar token.</li>
+<li><code>( ... )</code> is the paren-grouped pattern being repeated.</li>
+<li><code>sep</code> is an <em>optional</em> separator token.  Common examples are <code>,</code>, and <code>;</code>.</li>
+<li><code>rep</code> is the <em>required</em> repeat control.  Currently, this can be <em>either</em> <code>*</code> (indicating zero or more repeats) or <code>+</code> (indicating one or more repeats).  You cannot write &quot;zero or one&quot; or any other more specific counts or ranges.</li>
+</ul>
+
+<p>Repetitions can contain any other valid pattern, including literal token trees, captures, and other repetitions.</p>
+
+<p>Repetitions use the same syntax in the expansion.</p>
+
+<p>For example, below is a macro which formats each element as a string.  It matches zero or more comma-separated expressions and expands to an expression that constructs a vector.</p>
+<span class='rusttest'>macro_rules! vec_strs {
+    (
+        // Start a repetition:
+        $(
+            // Each repeat must contain an expression...
+            $element:expr
+        )
+        // ...separated by commas...
+        ,
+        // ...zero or more times.
+        *
+    ) =&gt; {
+        // Enclose the expansion in a block so that we can use
+        // multiple statements.
+        {
+            let mut v = Vec::new();
+
+            // Start a repetition:
+            $(
+                // Each repeat will contain the following statement, with
+                // $element replaced with the corresponding expression.
+                v.push(format!(&quot;{}&quot;, $element));
+            )*
+
+            v
+        }
+    };
+}
+
+fn main() {
+    let s = vec_strs![1, &quot;a&quot;, true, 3.14159f32];
+    assert_eq!(&amp;*s, &amp;[&quot;1&quot;, &quot;a&quot;, &quot;true&quot;, &quot;3.14159&quot;]);
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>vec_strs</span> {
+    (
+        <span class='comment'>// Start a repetition:</span>
+        $(
+            <span class='comment'>// Each repeat must contain an expression...</span>
+            <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>element</span>:<span class='ident'>expr</span>
+        )
+        <span class='comment'>// ...separated by commas...</span>
+        ,
+        <span class='comment'>// ...zero or more times.</span>
+        <span class='op'>*</span>
+    ) <span class='op'>=&gt;</span> {
+        <span class='comment'>// Enclose the expansion in a block so that we can use</span>
+        <span class='comment'>// multiple statements.</span>
+        {
+            <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>v</span> <span class='op'>=</span> <span class='ident'>Vec</span>::<span class='ident'>new</span>();
+
+            <span class='comment'>// Start a repetition:</span>
+            $(
+                <span class='comment'>// Each repeat will contain the following statement, with</span>
+                <span class='comment'>// $element replaced with the corresponding expression.</span>
+                <span class='ident'>v</span>.<span class='ident'>push</span>(<span class='macro'>format</span><span class='macro'>!</span>(<span class='string'>&quot;{}&quot;</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>element</span>));
+            )<span class='op'>*</span>
+
+            <span class='ident'>v</span>
+        }
+    };
+}</pre>
+
+    <script type="text/javascript">
+        window.playgroundUrl = "http://play.rust-lang.org";
+    </script>
+    
+<script type="text/javascript">
+document.addEventListener("DOMContentLoaded", function(event) {
+  document.getElementById("toggle-nav").onclick = toggleNav;
+  function toggleNav() {
+    var toc = document.getElementById("toc");
+    var pagewrapper = document.getElementById("page-wrapper");
+    toggleClass(toc, "mobile-hidden");
+    toggleClass(pagewrapper, "mobile-hidden");
+  };
+
+  function toggleClass(el, className) {
+     // from http://youmightnotneedjquery.com/
+     if (el.classList) {
+       el.classList.toggle(className);
+     } else {
+       var classes = el.className.split(' ');
+       var existingIndex = classes.indexOf(className);
+
+       if (existingIndex >= 0) {
+         classes.splice(existingIndex, 1);
+       } else {
+         classes.push(className);
+       }
+
+       el.className = classes.join(' ');
+     }
+  }
+
+  // The below code is used to add prev and next navigation links to the bottom
+  // of each of the sections.
+  // It works by extracting the current page based on the url and iterates over
+  // the menu links until it finds the menu item for the current page. We then
+  // create a copy of the preceding and following menu links and add the
+  // correct css class and insert them into the bottom of the page.
+  var toc = document.getElementById('toc').getElementsByTagName('a');
+  var href = document.location.pathname.split('/').pop();
+  if (href === 'index.html' || href === '') {
+    href = 'README.html';
+  }
+
+  for (var i = 0; i < toc.length; i++) {
+    if (toc[i].attributes['href'].value.split('/').pop() === href) {
+      var nav = document.createElement('p');
+      if (i > 0) {
+        var prevNode = toc[i-1].cloneNode(true);
+        prevNode.className = 'left';
+        prevNode.setAttribute('rel', 'prev');
+        nav.appendChild(prevNode);
+      }
+      if (i < toc.length - 1) {
+        var nextNode = toc[i+1].cloneNode(true);
+        nextNode.className = 'right';
+        nextNode.setAttribute('rel', 'next');
+        nav.appendChild(nextNode);
+      }
+      document.getElementById('page').appendChild(nav);
+      break;
+    }
+  }
+
+});
+</script>
+<script type="text/javascript" src="playpen.js"></script>
+</div></div>
+
+
+</body>
+</html>

@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <title>Non-Identifier Identifiers</title>
+
+    <link rel="stylesheet" type="text/css" href="rust-book.css">
+
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    <div id="nav">
+                <button id="toggle-nav">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                </button>
+              </div>
+<div id='toc' class='mobile-hidden'>
+<ul class='chapter'>
+<li><a  href='README.html'><b>1.</b> Introduction</a>
+</li>
+<li><a  href='mbe-README.html'><b>2.</b> Macros</a>
+<ul class='section'>
+<li><a  href='mbe-syn-README.html'><b>2.1.</b> Syntax Extensions</a>
+<ul class='section'>
+<li><a  href='mbe-syn-source-analysis.html'><b>2.1.1.</b> Source Analysis</a>
+</li>
+<li><a  href='mbe-syn-macros-in-the-ast.html'><b>2.1.2.</b> Macros in the AST</a>
+</li>
+<li><a  href='mbe-syn-expansion.html'><b>2.1.3.</b> Expansion</a>
+</li>
+</ul>
+</li>
+<li><a  href='mbe-macro-rules.html'><b>2.2.</b> macro_rules!</a>
+</li>
+<li><a  href='mbe-min-README.html'><b>2.3.</b> Minutiae</a>
+<ul class='section'>
+<li><a  href='mbe-min-captures-and-expansion-redux.html'><b>2.3.1.</b> Captures and Expansion Redux</a>
+</li>
+<li><a  href='mbe-min-hygiene.html'><b>2.3.2.</b> Hygiene</a>
+</li>
+<li><a class='active' href='mbe-min-non-identifier-identifiers.html'><b>2.3.3.</b> Non-Identifier Identifiers</a>
+</li>
+<li><a  href='mbe-min-debugging.html'><b>2.3.4.</b> Debugging</a>
+</li>
+<li><a  href='mbe-min-scoping.html'><b>2.3.5.</b> Scoping</a>
+</li>
+<li><a  href='mbe-min-import-export.html'><b>2.3.6.</b> Import/Export</a>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a  href='pat-README.html'><b>3.</b> Patterns</a>
+<ul class='section'>
+<li><a  href='pat-callbacks.html'><b>3.1.</b> Callbacks</a>
+</li>
+<li><a  href='pat-incremental-tt-munchers.html'><b>3.2.</b> Incremental TT Munchers</a>
+</li>
+<li><a  href='pat-internal-rules.html'><b>3.3.</b> Internal Rules</a>
+</li>
+<li><a  href='pat-push-down-accumulation.html'><b>3.4.</b> Push-Down Accumulation</a>
+</li>
+<li><a  href='pat-repetition-replacement.html'><b>3.5.</b> Repetition Replacement</a>
+</li>
+<li><a  href='pat-trailing-separators.html'><b>3.6.</b> Trailing Separators</a>
+</li>
+<li><a  href='pat-tt-bundling.html'><b>3.7.</b> TT Bundling</a>
+</li>
+<li><a  href='pat-provisional.html'><b>3.8.</b> Provisional</a>
+</li>
+</ul>
+</li>
+<li><a  href='blk-README.html'><b>4.</b> Building Blocks</a>
+<ul class='section'>
+<li><a  href='blk-ast-coercion.html'><b>4.1.</b> AST Coercion</a>
+</li>
+<li><a  href='blk-counting.html'><b>4.2.</b> Counting</a>
+</li>
+<li><a  href='blk-enum-parsing.html'><b>4.3.</b> Enum Parsing</a>
+</li>
+</ul>
+</li>
+<li><a  href='aeg-README.html'><b>5.</b> Annotated Examples</a>
+<ul class='section'>
+<li><a  href='aeg-ook.html'><b>5.1.</b> Ook!</a>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<div id='page-wrapper'>
+<div id='page'>
+
+
+    <h1 class="title">Non-Identifier Identifiers</h1>
+    <p>There are two tokens which you are likely to run into eventually that <em>look</em> like identifiers, but aren&#39;t.  Except when they are.</p>
+
+<p>First is <code>self</code>.  This is <em>very definitely</em> a keyword.  However, it also happens to fit the definition of an identifier.  In regular Rust code, there&#39;s no way for <code>self</code> to be interpreted as an identifier, but it <em>can</em> happen with macros:</p>
+<span class='rusttest'>macro_rules! what_is {
+    (self) =&gt; {&quot;the keyword `self`&quot;};
+    ($i:ident) =&gt; {concat!(&quot;the identifier `&quot;, stringify!($i), &quot;`&quot;)};
+}
+
+macro_rules! call_with_ident {
+    ($c:ident($i:ident)) =&gt; {$c!($i)};
+}
+
+fn main() {
+    println!(&quot;{}&quot;, what_is!(self));
+    println!(&quot;{}&quot;, call_with_ident!(what_is(self)));
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>what_is</span> {
+    (<span class='self'>self</span>) <span class='op'>=&gt;</span> {<span class='string'>&quot;the keyword `self`&quot;</span>};
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>:<span class='ident'>ident</span>) <span class='op'>=&gt;</span> {<span class='macro'>concat</span><span class='macro'>!</span>(<span class='string'>&quot;the identifier `&quot;</span>, <span class='macro'>stringify</span><span class='macro'>!</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>), <span class='string'>&quot;`&quot;</span>)};
+}
+
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>call_with_ident</span> {
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>c</span>:<span class='ident'>ident</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>:<span class='ident'>ident</span>)) <span class='op'>=&gt;</span> {<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>c</span><span class='op'>!</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>)};
+}
+
+<span class='kw'>fn</span> <span class='ident'>main</span>() {
+    <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;{}&quot;</span>, <span class='macro'>what_is</span><span class='macro'>!</span>(<span class='self'>self</span>));
+    <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;{}&quot;</span>, <span class='macro'>call_with_ident</span><span class='macro'>!</span>(<span class='ident'>what_is</span>(<span class='self'>self</span>)));
+}</pre>
+
+<p>The above outputs:</p>
+
+<pre><code class="language-text">the keyword `self`
+the keyword `self`
+</code></pre>
+
+<p>But that makes no sense; <code>call_with_ident!</code> required an identifier, matched one, and substituted it!  So <code>self</code> is both a keyword and not a keyword at the same time.  You might wonder how this is in any way important.  Take this example:</p>
+<span class='rusttest'>macro_rules! make_mutable {
+    ($i:ident) =&gt; {let mut $i = $i;};
+}
+
+struct Dummy(i32);
+
+impl Dummy {
+    fn double(self) -&gt; Dummy {
+        make_mutable!(self);
+        self.0 *= 2;
+        self
+    }
+}
+
+fn main() {
+    println!(&quot;{:?}&quot;, Dummy(4).double().0);
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>make_mutable</span> {
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>:<span class='ident'>ident</span>) <span class='op'>=&gt;</span> {<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>;};
+}
+
+<span class='kw'>struct</span> <span class='ident'>Dummy</span>(<span class='ident'>i32</span>);
+
+<span class='kw'>impl</span> <span class='ident'>Dummy</span> {
+    <span class='kw'>fn</span> <span class='ident'>double</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>Dummy</span> {
+        <span class='macro'>make_mutable</span><span class='macro'>!</span>(<span class='self'>self</span>);
+        <span class='self'>self</span>.<span class='number'>0</span> <span class='op'>*=</span> <span class='number'>2</span>;
+        <span class='self'>self</span>
+    }
+}</pre>
+
+<p>This fails to compile with:</p>
+
+<pre><code class="language-text">&lt;anon&gt;:2:28: 2:30 error: expected identifier, found keyword `self`
+&lt;anon&gt;:2     ($i:ident) =&gt; {let mut $i = $i;};
+                                    ^~
+</code></pre>
+
+<p>So the macro will happily match <code>self</code> as an identifier, allowing you to use it in cases where you can&#39;t actually use it.  But, fine; it somehow remembers that <code>self</code> is a keyword even when it&#39;s an identifier, so you <em>should</em> be able to do this, right?</p>
+<span class='rusttest'>macro_rules! make_self_mutable {
+    ($i:ident) =&gt; {let mut $i = self;};
+}
+
+struct Dummy(i32);
+
+impl Dummy {
+    fn double(self) -&gt; Dummy {
+        make_self_mutable!(mut_self);
+        mut_self.0 *= 2;
+        mut_self
+    }
+}
+
+fn main() {
+    println!(&quot;{:?}&quot;, Dummy(4).double().0);
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>make_self_mutable</span> {
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>:<span class='ident'>ident</span>) <span class='op'>=&gt;</span> {<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span> <span class='op'>=</span> <span class='self'>self</span>;};
+}
+
+<span class='kw'>struct</span> <span class='ident'>Dummy</span>(<span class='ident'>i32</span>);
+
+<span class='kw'>impl</span> <span class='ident'>Dummy</span> {
+    <span class='kw'>fn</span> <span class='ident'>double</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>Dummy</span> {
+        <span class='macro'>make_self_mutable</span><span class='macro'>!</span>(<span class='ident'>mut_self</span>);
+        <span class='ident'>mut_self</span>.<span class='number'>0</span> <span class='op'>*=</span> <span class='number'>2</span>;
+        <span class='ident'>mut_self</span>
+    }
+}</pre>
+
+<p>This fails with:</p>
+
+<pre><code class="language-text">&lt;anon&gt;:2:33: 2:37 error: `self` is not available in a static method. Maybe a `self` argument is missing? [E0424]
+&lt;anon&gt;:2     ($i:ident) =&gt; {let mut $i = self;};
+                                         ^~~~
+</code></pre>
+
+<p><em>That</em> doesn&#39;t make any sense, either.  It&#39;s <em>not</em> in a static method.  It&#39;s almost like it&#39;s complaining that the <code>self</code> it&#39;s trying to use isn&#39;t the <em>same</em> <code>self</code>... as though the <code>self</code> keyword has hygiene, like an... identifier.</p>
+<span class='rusttest'>macro_rules! double_method {
+    ($body:expr) =&gt; {
+        fn double(mut self) -&gt; Dummy {
+            $body
+        }
+    };
+}
+
+struct Dummy(i32);
+
+impl Dummy {
+    double_method! {{
+        self.0 *= 2;
+        self
+    }}
+}
+
+fn main() {
+    println!(&quot;{:?}&quot;, Dummy(4).double().0);
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>double_method</span> {
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>body</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> {
+        <span class='kw'>fn</span> <span class='ident'>double</span>(<span class='kw-2'>mut</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>Dummy</span> {
+            <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>body</span>
+        }
+    };
+}
+
+<span class='kw'>struct</span> <span class='ident'>Dummy</span>(<span class='ident'>i32</span>);
+
+<span class='kw'>impl</span> <span class='ident'>Dummy</span> {
+    <span class='macro'>double_method</span><span class='macro'>!</span> {{
+        <span class='self'>self</span>.<span class='number'>0</span> <span class='op'>*=</span> <span class='number'>2</span>;
+        <span class='self'>self</span>
+    }}
+}</pre>
+
+<p>Same error.  What about...</p>
+<span class='rusttest'>macro_rules! double_method {
+    ($self_:ident, $body:expr) =&gt; {
+        fn double(mut $self_) -&gt; Dummy {
+            $body
+        }
+    };
+}
+
+struct Dummy(i32);
+
+impl Dummy {
+    double_method! {self, {
+        self.0 *= 2;
+        self
+    }}
+}
+
+fn main() {
+    println!(&quot;{:?}&quot;, Dummy(4).double().0);
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>double_method</span> {
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>self_</span>:<span class='ident'>ident</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>body</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> {
+        <span class='kw'>fn</span> <span class='ident'>double</span>(<span class='kw-2'>mut</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>self_</span>) <span class='op'>-&gt;</span> <span class='ident'>Dummy</span> {
+            <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>body</span>
+        }
+    };
+}
+
+<span class='kw'>struct</span> <span class='ident'>Dummy</span>(<span class='ident'>i32</span>);
+
+<span class='kw'>impl</span> <span class='ident'>Dummy</span> {
+    <span class='macro'>double_method</span><span class='macro'>!</span> {<span class='self'>self</span>, {
+        <span class='self'>self</span>.<span class='number'>0</span> <span class='op'>*=</span> <span class='number'>2</span>;
+        <span class='self'>self</span>
+    }}
+}</pre>
+
+<p>At last, <em>this works</em>.  So <code>self</code> is both a keyword <em>and</em> an identifier when it feels like it.  Surely this works for other, similar constructs, right?</p>
+<span class='rusttest'>macro_rules! double_method {
+    ($self_:ident, $body:expr) =&gt; {
+        fn double($self_) -&gt; Dummy {
+            $body
+        }
+    };
+}
+
+struct Dummy(i32);
+
+impl Dummy {
+    double_method! {_, 0}
+}
+
+fn main() {
+    println!(&quot;{:?}&quot;, Dummy(4).double().0);
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>double_method</span> {
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>self_</span>:<span class='ident'>ident</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>body</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> {
+        <span class='kw'>fn</span> <span class='ident'>double</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>self_</span>) <span class='op'>-&gt;</span> <span class='ident'>Dummy</span> {
+            <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>body</span>
+        }
+    };
+}
+
+<span class='kw'>struct</span> <span class='ident'>Dummy</span>(<span class='ident'>i32</span>);
+
+<span class='kw'>impl</span> <span class='ident'>Dummy</span> {
+    <span class='macro'>double_method</span><span class='macro'>!</span> {_, <span class='number'>0</span>}
+}</pre>
+
+<pre><code class="language-text">&lt;anon&gt;:12:21: 12:22 error: expected ident, found _
+&lt;anon&gt;:12     double_method! {_, 0}
+                              ^
+</code></pre>
+
+<p>No, of course not.  <code>_</code> is a keyword that is valid in patterns and expressions, but somehow <em>isn&#39;t</em> an identifier like the keyword <code>self</code> is, despite matching the definition of an identifier just the same.</p>
+
+<p>You might think you can get around this by using <code>$self_:pat</code> instead; that way, <code>_</code> will match!  Except, no, because <code>self</code> isn&#39;t a pattern.  Joy.</p>
+
+<p>The only work around for this (in cases where you want to accept some combination of these tokens) is to use a <code>tt</code> matcher instead.</p>
+
+    <script type="text/javascript">
+        window.playgroundUrl = "http://play.rust-lang.org";
+    </script>
+    
+<script type="text/javascript">
+document.addEventListener("DOMContentLoaded", function(event) {
+  document.getElementById("toggle-nav").onclick = toggleNav;
+  function toggleNav() {
+    var toc = document.getElementById("toc");
+    var pagewrapper = document.getElementById("page-wrapper");
+    toggleClass(toc, "mobile-hidden");
+    toggleClass(pagewrapper, "mobile-hidden");
+  };
+
+  function toggleClass(el, className) {
+     // from http://youmightnotneedjquery.com/
+     if (el.classList) {
+       el.classList.toggle(className);
+     } else {
+       var classes = el.className.split(' ');
+       var existingIndex = classes.indexOf(className);
+
+       if (existingIndex >= 0) {
+         classes.splice(existingIndex, 1);
+       } else {
+         classes.push(className);
+       }
+
+       el.className = classes.join(' ');
+     }
+  }
+
+  // The below code is used to add prev and next navigation links to the bottom
+  // of each of the sections.
+  // It works by extracting the current page based on the url and iterates over
+  // the menu links until it finds the menu item for the current page. We then
+  // create a copy of the preceding and following menu links and add the
+  // correct css class and insert them into the bottom of the page.
+  var toc = document.getElementById('toc').getElementsByTagName('a');
+  var href = document.location.pathname.split('/').pop();
+  if (href === 'index.html' || href === '') {
+    href = 'README.html';
+  }
+
+  for (var i = 0; i < toc.length; i++) {
+    if (toc[i].attributes['href'].value.split('/').pop() === href) {
+      var nav = document.createElement('p');
+      if (i > 0) {
+        var prevNode = toc[i-1].cloneNode(true);
+        prevNode.className = 'left';
+        prevNode.setAttribute('rel', 'prev');
+        nav.appendChild(prevNode);
+      }
+      if (i < toc.length - 1) {
+        var nextNode = toc[i+1].cloneNode(true);
+        nextNode.className = 'right';
+        nextNode.setAttribute('rel', 'next');
+        nav.appendChild(nextNode);
+      }
+      document.getElementById('page').appendChild(nav);
+      break;
+    }
+  }
+
+});
+</script>
+<script type="text/javascript" src="playpen.js"></script>
+</div></div>
+
+
+</body>
+</html>

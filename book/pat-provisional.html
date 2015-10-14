@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <title>Provisional</title>
+
+    <link rel="stylesheet" type="text/css" href="rust-book.css">
+
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    <div id="nav">
+                <button id="toggle-nav">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                </button>
+              </div>
+<div id='toc' class='mobile-hidden'>
+<ul class='chapter'>
+<li><a  href='README.html'><b>1.</b> Introduction</a>
+</li>
+<li><a  href='mbe-README.html'><b>2.</b> Macros</a>
+<ul class='section'>
+<li><a  href='mbe-syn-README.html'><b>2.1.</b> Syntax Extensions</a>
+<ul class='section'>
+<li><a  href='mbe-syn-source-analysis.html'><b>2.1.1.</b> Source Analysis</a>
+</li>
+<li><a  href='mbe-syn-macros-in-the-ast.html'><b>2.1.2.</b> Macros in the AST</a>
+</li>
+<li><a  href='mbe-syn-expansion.html'><b>2.1.3.</b> Expansion</a>
+</li>
+</ul>
+</li>
+<li><a  href='mbe-macro-rules.html'><b>2.2.</b> macro_rules!</a>
+</li>
+<li><a  href='mbe-min-README.html'><b>2.3.</b> Minutiae</a>
+<ul class='section'>
+<li><a  href='mbe-min-captures-and-expansion-redux.html'><b>2.3.1.</b> Captures and Expansion Redux</a>
+</li>
+<li><a  href='mbe-min-hygiene.html'><b>2.3.2.</b> Hygiene</a>
+</li>
+<li><a  href='mbe-min-non-identifier-identifiers.html'><b>2.3.3.</b> Non-Identifier Identifiers</a>
+</li>
+<li><a  href='mbe-min-debugging.html'><b>2.3.4.</b> Debugging</a>
+</li>
+<li><a  href='mbe-min-scoping.html'><b>2.3.5.</b> Scoping</a>
+</li>
+<li><a  href='mbe-min-import-export.html'><b>2.3.6.</b> Import/Export</a>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a  href='pat-README.html'><b>3.</b> Patterns</a>
+<ul class='section'>
+<li><a  href='pat-callbacks.html'><b>3.1.</b> Callbacks</a>
+</li>
+<li><a  href='pat-incremental-tt-munchers.html'><b>3.2.</b> Incremental TT Munchers</a>
+</li>
+<li><a  href='pat-internal-rules.html'><b>3.3.</b> Internal Rules</a>
+</li>
+<li><a  href='pat-push-down-accumulation.html'><b>3.4.</b> Push-Down Accumulation</a>
+</li>
+<li><a  href='pat-repetition-replacement.html'><b>3.5.</b> Repetition Replacement</a>
+</li>
+<li><a  href='pat-trailing-separators.html'><b>3.6.</b> Trailing Separators</a>
+</li>
+<li><a  href='pat-tt-bundling.html'><b>3.7.</b> TT Bundling</a>
+</li>
+<li><a class='active' href='pat-provisional.html'><b>3.8.</b> Provisional</a>
+</li>
+</ul>
+</li>
+<li><a  href='blk-README.html'><b>4.</b> Building Blocks</a>
+<ul class='section'>
+<li><a  href='blk-ast-coercion.html'><b>4.1.</b> AST Coercion</a>
+</li>
+<li><a  href='blk-counting.html'><b>4.2.</b> Counting</a>
+</li>
+<li><a  href='blk-enum-parsing.html'><b>4.3.</b> Enum Parsing</a>
+</li>
+</ul>
+</li>
+<li><a  href='aeg-README.html'><b>5.</b> Annotated Examples</a>
+<ul class='section'>
+<li><a  href='aeg-ook.html'><b>5.1.</b> Ook!</a>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<div id='page-wrapper'>
+<div id='page'>
+
+
+    <h1 class="title">Provisional</h1>
+    <p>This section is for patterns or techniques which are of dubious value, or which might be <em>too</em> niche for inclusion.</p>
+
+<h2 id="abacus-counters" class='section-header'><a
+                           href="#abacus-counters">Abacus Counters</a></h2>
+<blockquote>
+<p><strong>Provisional</strong>: needs a more compelling example.  Although an important part of the <code>Ook!</code> macro, matching nested groups that are <em>not</em> denoted by Rust groups is sufficiently unusual that it may not merit inclusion.</p>
+
+<p><strong>Note</strong>: this section assumes understanding of <a href="#push-down-accumulation">push-down accumulation</a> and <a href="#incremental-tt-munchers">incremental TT munchers</a>.</p>
+</blockquote>
+<span class='rusttest'>macro_rules! abacus {
+    ((- $($moves:tt)*) -&gt; (+ $($count:tt)*)) =&gt; {
+        abacus!(($($moves)*) -&gt; ($($count)*))
+    };
+    ((- $($moves:tt)*) -&gt; ($($count:tt)*)) =&gt; {
+        abacus!(($($moves)*) -&gt; (- $($count)*))
+    };
+    ((+ $($moves:tt)*) -&gt; (- $($count:tt)*)) =&gt; {
+        abacus!(($($moves)*) -&gt; ($($count)*))
+    };
+    ((+ $($moves:tt)*) -&gt; ($($count:tt)*)) =&gt; {
+        abacus!(($($moves)*) -&gt; (+ $($count)*))
+    };
+
+    // Check if the final result is zero.
+    (() -&gt; ()) =&gt; { true };
+    (() -&gt; ($($count:tt)+)) =&gt; { false };
+}
+
+fn main() {
+    let equals_zero = abacus!((++-+-+++--++---++----+) -&gt; ());
+    assert_eq!(equals_zero, true);
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>abacus</span> {
+    ((<span class='op'>-</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>moves</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>-&gt;</span> (<span class='op'>+</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>count</span>:<span class='ident'>tt</span>)<span class='op'>*</span>)) <span class='op'>=&gt;</span> {
+        <span class='macro'>abacus</span><span class='macro'>!</span>(($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>moves</span>)<span class='op'>*</span>) <span class='op'>-&gt;</span> ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>count</span>)<span class='op'>*</span>))
+    };
+    ((<span class='op'>-</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>moves</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>-&gt;</span> ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>count</span>:<span class='ident'>tt</span>)<span class='op'>*</span>)) <span class='op'>=&gt;</span> {
+        <span class='macro'>abacus</span><span class='macro'>!</span>(($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>moves</span>)<span class='op'>*</span>) <span class='op'>-&gt;</span> (<span class='op'>-</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>count</span>)<span class='op'>*</span>))
+    };
+    ((<span class='op'>+</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>moves</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>-&gt;</span> (<span class='op'>-</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>count</span>:<span class='ident'>tt</span>)<span class='op'>*</span>)) <span class='op'>=&gt;</span> {
+        <span class='macro'>abacus</span><span class='macro'>!</span>(($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>moves</span>)<span class='op'>*</span>) <span class='op'>-&gt;</span> ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>count</span>)<span class='op'>*</span>))
+    };
+    ((<span class='op'>+</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>moves</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>-&gt;</span> ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>count</span>:<span class='ident'>tt</span>)<span class='op'>*</span>)) <span class='op'>=&gt;</span> {
+        <span class='macro'>abacus</span><span class='macro'>!</span>(($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>moves</span>)<span class='op'>*</span>) <span class='op'>-&gt;</span> (<span class='op'>+</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>count</span>)<span class='op'>*</span>))
+    };
+
+    <span class='comment'>// Check if the final result is zero.</span>
+    (() <span class='op'>-&gt;</span> ()) <span class='op'>=&gt;</span> { <span class='boolval'>true</span> };
+    (() <span class='op'>-&gt;</span> ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>count</span>:<span class='ident'>tt</span>)<span class='op'>+</span>)) <span class='op'>=&gt;</span> { <span class='boolval'>false</span> };
+}
+
+<span class='kw'>fn</span> <span class='ident'>main</span>() {
+    <span class='kw'>let</span> <span class='ident'>equals_zero</span> <span class='op'>=</span> <span class='macro'>abacus</span><span class='macro'>!</span>((<span class='op'>+</span><span class='op'>+</span><span class='op'>-</span><span class='op'>+</span><span class='op'>-</span><span class='op'>+</span><span class='op'>+</span><span class='op'>+</span><span class='op'>-</span><span class='op'>-</span><span class='op'>+</span><span class='op'>+</span><span class='op'>-</span><span class='op'>-</span><span class='op'>-</span><span class='op'>+</span><span class='op'>+</span><span class='op'>-</span><span class='op'>-</span><span class='op'>-</span><span class='op'>-</span><span class='op'>+</span>) <span class='op'>-&gt;</span> ());
+    <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>equals_zero</span>, <span class='boolval'>true</span>);
+}</pre>
+
+<p>This technique can be used in cases where you need to keep track of a varying counter that starts at or near zero, and must support the following operations:</p>
+
+<ul>
+<li>Increment by one.</li>
+<li>Decrement by one.</li>
+<li>Compare to zero (or any other fixed, finite value).</li>
+</ul>
+
+<p>A value of <em>n</em> is represented by <em>n</em> instances of a specific token stored in a group.  Modifications are done using recursion and <a href="#push-down-accumulation">push-down accumulation</a>.  Assuming the token used is <code>x</code>, the operations above are implemented as follows:</p>
+
+<ul>
+<li>Increment by one: match <code>($($count:tt)*)</code>, substitute <code>(x $($count)*)</code>.</li>
+<li>Decrement by one: match <code>(x $($count:tt)*)</code>, substitute <code>($($count)*)</code>.</li>
+<li>Compare to zero: match <code>()</code>.</li>
+<li>Compare to one: match <code>(x)</code>.</li>
+<li>Compare to two: match <code>(x x)</code>.</li>
+<li><em>(and so on...)</em></li>
+</ul>
+
+<p>In this way, operations on the counter are like flicking tokens back and forth like an abacus.<sup id="fnref1"><a href="#fn1" rel="footnote">1</a></sup></p>
+
+<p>In cases where you want to represent negative values, <em>-n</em> can be represented as <em>n</em> instances of a <em>different</em> token.  In the example given above, <em>+n</em> is stored as <em>n</em> <code>+</code> tokens, and <em>-m</em> is stored as <em>m</em> <code>-</code> tokens.</p>
+
+<p>In this case, the operations become slightly more complicated; increment and decrement effectively reverse their usual meanings when the counter is negative.  To whit given <code>+</code> and <code>-</code> for the positive and negative tokens respectively, the operations change to:</p>
+
+<ul>
+<li>Increment by one:
+
+<ul>
+<li>match <code>()</code>, substitute <code>(+)</code>.</li>
+<li>match <code>(- $($count:tt)*)</code>, substitute <code>($($count)*)</code>.</li>
+<li>match <code>($($count:tt)+)</code>, substitute <code>(+ $($count)+)</code>.</li>
+</ul></li>
+<li>Decrement by one:
+
+<ul>
+<li>match <code>()</code>, substitute <code>(-)</code>.</li>
+<li>match <code>(+ $($count:tt)*)</code>, substitute <code>($($count)*)</code>.</li>
+<li>match <code>($($count:tt)+)</code>, substitute <code>(- $($count)+)</code>.</li>
+</ul></li>
+<li>Compare to 0: match <code>()</code>.</li>
+<li>Compare to +1: match <code>(+)</code>.</li>
+<li>Compare to -1: match <code>(-)</code>.</li>
+<li>Compare to +2: match <code>(++)</code>.</li>
+<li>Compare to -2: match <code>(--)</code>.</li>
+<li><em>(and so on...)</em></li>
+</ul>
+
+<p>Note that the example at the top combines some of the rules together (for example, it combines increment on <code>()</code> and <code>($($count:tt)+)</code> into an increment on <code>($($count:tt)*)</code>).</p>
+
+<p>If you want to extract the actual <em>value</em> of the counter, this can be done using a regular <a href="../blk/README.html#counting">counter macro</a>.  For the example above, the terminal rules can be replaced with the following:</p>
+<span class='rusttest'>fn main() {
+    macro_rules! abacus {
+        // ...
+    
+        // This extracts the counter as an integer expression.
+        (() -&gt; ()) =&gt; {0};
+        (() -&gt; (- $($count:tt)*)) =&gt; {
+            {(-1i32) $(- replace_expr!($count 1i32))*}
+        };
+        (() -&gt; (+ $($count:tt)*)) =&gt; {
+            {(1i32) $(+ replace_expr!($count 1i32))*}
+        };
+    }
+    
+    macro_rules! replace_expr {
+        ($_t:tt $sub:expr) =&gt; {$sub};
+    }
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>abacus</span> {
+    <span class='comment'>// ...</span>
+
+    <span class='comment'>// This extracts the counter as an integer expression.</span>
+    (() <span class='op'>-&gt;</span> ()) <span class='op'>=&gt;</span> {<span class='number'>0</span>};
+    (() <span class='op'>-&gt;</span> (<span class='op'>-</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>count</span>:<span class='ident'>tt</span>)<span class='op'>*</span>)) <span class='op'>=&gt;</span> {
+        {(<span class='op'>-</span><span class='number'>1i32</span>) $(<span class='op'>-</span> <span class='macro'>replace_expr</span><span class='macro'>!</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>count</span> <span class='number'>1i32</span>))<span class='op'>*</span>}
+    };
+    (() <span class='op'>-&gt;</span> (<span class='op'>+</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>count</span>:<span class='ident'>tt</span>)<span class='op'>*</span>)) <span class='op'>=&gt;</span> {
+        {(<span class='number'>1i32</span>) $(<span class='op'>+</span> <span class='macro'>replace_expr</span><span class='macro'>!</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>count</span> <span class='number'>1i32</span>))<span class='op'>*</span>}
+    };
+}
+
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>replace_expr</span> {
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>_t</span>:<span class='ident'>tt</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>sub</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> {<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>sub</span>};
+}</pre>
+
+<blockquote>
+<p><strong><abbr title="Just for this example">JFTE</abbr></strong>: strictly speaking, the above formulation of <code>abacus!</code> is needlessly complex.  It can be implemented much more efficiently using repetition, provided you <em>do not</em> need to match against the counter&#39;s value in a macro:</p>
+<span class='rusttest'>fn main() {
+    macro_rules! abacus {
+        (-) =&gt; {-1};
+        (+) =&gt; {1};
+        ($($moves:tt)*) =&gt; {
+            0 $(+ abacus!($moves))*
+        }
+    }
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>abacus</span> {
+    (<span class='op'>-</span>) <span class='op'>=&gt;</span> {<span class='op'>-</span><span class='number'>1</span>};
+    (<span class='op'>+</span>) <span class='op'>=&gt;</span> {<span class='number'>1</span>};
+    ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>moves</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>=&gt;</span> {
+        <span class='number'>0</span> $(<span class='op'>+</span> <span class='macro'>abacus</span><span class='macro'>!</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>moves</span>))<span class='op'>*</span>
+    }
+}</pre>
+</blockquote>
+
+<div class="footnotes">
+<hr>
+<ol>
+
+<li id="fn1">
+<p>This desperately thin reasoning conceals the <em>real</em> reason for this name: to avoid having <em>yet another</em> thing with &quot;token&quot; in the name.  Talk to your writer about avoiding <a href="https://en.wikipedia.org/wiki/Semantic_satiation">semantic satiation</a> today!&nbsp;<a href="#fnref1" rev="footnote">&#8617;</a></p>
+
+<p>In fairness, it could <em>also</em> have been called <a href="https://en.wikipedia.org/wiki/Unary_numeral_system">&quot;unary counting&quot;</a>.</p>
+</li>
+
+</ol>
+</div>
+
+    <script type="text/javascript">
+        window.playgroundUrl = "http://play.rust-lang.org";
+    </script>
+    
+<script type="text/javascript">
+document.addEventListener("DOMContentLoaded", function(event) {
+  document.getElementById("toggle-nav").onclick = toggleNav;
+  function toggleNav() {
+    var toc = document.getElementById("toc");
+    var pagewrapper = document.getElementById("page-wrapper");
+    toggleClass(toc, "mobile-hidden");
+    toggleClass(pagewrapper, "mobile-hidden");
+  };
+
+  function toggleClass(el, className) {
+     // from http://youmightnotneedjquery.com/
+     if (el.classList) {
+       el.classList.toggle(className);
+     } else {
+       var classes = el.className.split(' ');
+       var existingIndex = classes.indexOf(className);
+
+       if (existingIndex >= 0) {
+         classes.splice(existingIndex, 1);
+       } else {
+         classes.push(className);
+       }
+
+       el.className = classes.join(' ');
+     }
+  }
+
+  // The below code is used to add prev and next navigation links to the bottom
+  // of each of the sections.
+  // It works by extracting the current page based on the url and iterates over
+  // the menu links until it finds the menu item for the current page. We then
+  // create a copy of the preceding and following menu links and add the
+  // correct css class and insert them into the bottom of the page.
+  var toc = document.getElementById('toc').getElementsByTagName('a');
+  var href = document.location.pathname.split('/').pop();
+  if (href === 'index.html' || href === '') {
+    href = 'README.html';
+  }
+
+  for (var i = 0; i < toc.length; i++) {
+    if (toc[i].attributes['href'].value.split('/').pop() === href) {
+      var nav = document.createElement('p');
+      if (i > 0) {
+        var prevNode = toc[i-1].cloneNode(true);
+        prevNode.className = 'left';
+        prevNode.setAttribute('rel', 'prev');
+        nav.appendChild(prevNode);
+      }
+      if (i < toc.length - 1) {
+        var nextNode = toc[i+1].cloneNode(true);
+        nextNode.className = 'right';
+        nextNode.setAttribute('rel', 'next');
+        nav.appendChild(nextNode);
+      }
+      document.getElementById('page').appendChild(nav);
+      break;
+    }
+  }
+
+});
+</script>
+<script type="text/javascript" src="playpen.js"></script>
+</div></div>
+
+
+</body>
+</html>

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <title>Expansion</title>
+
+    <link rel="stylesheet" type="text/css" href="rust-book.css">
+
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    <div id="nav">
+                <button id="toggle-nav">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                </button>
+              </div>
+<div id='toc' class='mobile-hidden'>
+<ul class='chapter'>
+<li><a  href='README.html'><b>1.</b> Introduction</a>
+</li>
+<li><a  href='mbe-README.html'><b>2.</b> Macros</a>
+<ul class='section'>
+<li><a  href='mbe-syn-README.html'><b>2.1.</b> Syntax Extensions</a>
+<ul class='section'>
+<li><a  href='mbe-syn-source-analysis.html'><b>2.1.1.</b> Source Analysis</a>
+</li>
+<li><a  href='mbe-syn-macros-in-the-ast.html'><b>2.1.2.</b> Macros in the AST</a>
+</li>
+<li><a class='active' href='mbe-syn-expansion.html'><b>2.1.3.</b> Expansion</a>
+</li>
+</ul>
+</li>
+<li><a  href='mbe-macro-rules.html'><b>2.2.</b> macro_rules!</a>
+</li>
+<li><a  href='mbe-min-README.html'><b>2.3.</b> Minutiae</a>
+<ul class='section'>
+<li><a  href='mbe-min-captures-and-expansion-redux.html'><b>2.3.1.</b> Captures and Expansion Redux</a>
+</li>
+<li><a  href='mbe-min-hygiene.html'><b>2.3.2.</b> Hygiene</a>
+</li>
+<li><a  href='mbe-min-non-identifier-identifiers.html'><b>2.3.3.</b> Non-Identifier Identifiers</a>
+</li>
+<li><a  href='mbe-min-debugging.html'><b>2.3.4.</b> Debugging</a>
+</li>
+<li><a  href='mbe-min-scoping.html'><b>2.3.5.</b> Scoping</a>
+</li>
+<li><a  href='mbe-min-import-export.html'><b>2.3.6.</b> Import/Export</a>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a  href='pat-README.html'><b>3.</b> Patterns</a>
+<ul class='section'>
+<li><a  href='pat-callbacks.html'><b>3.1.</b> Callbacks</a>
+</li>
+<li><a  href='pat-incremental-tt-munchers.html'><b>3.2.</b> Incremental TT Munchers</a>
+</li>
+<li><a  href='pat-internal-rules.html'><b>3.3.</b> Internal Rules</a>
+</li>
+<li><a  href='pat-push-down-accumulation.html'><b>3.4.</b> Push-Down Accumulation</a>
+</li>
+<li><a  href='pat-repetition-replacement.html'><b>3.5.</b> Repetition Replacement</a>
+</li>
+<li><a  href='pat-trailing-separators.html'><b>3.6.</b> Trailing Separators</a>
+</li>
+<li><a  href='pat-tt-bundling.html'><b>3.7.</b> TT Bundling</a>
+</li>
+<li><a  href='pat-provisional.html'><b>3.8.</b> Provisional</a>
+</li>
+</ul>
+</li>
+<li><a  href='blk-README.html'><b>4.</b> Building Blocks</a>
+<ul class='section'>
+<li><a  href='blk-ast-coercion.html'><b>4.1.</b> AST Coercion</a>
+</li>
+<li><a  href='blk-counting.html'><b>4.2.</b> Counting</a>
+</li>
+<li><a  href='blk-enum-parsing.html'><b>4.3.</b> Enum Parsing</a>
+</li>
+</ul>
+</li>
+<li><a  href='aeg-README.html'><b>5.</b> Annotated Examples</a>
+<ul class='section'>
+<li><a  href='aeg-ook.html'><b>5.1.</b> Ook!</a>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<div id='page-wrapper'>
+<div id='page'>
+
+
+    <h1 class="title">Expansion</h1>
+    <p>Expansion is a relatively simple affair.  At some point <em>after</em> the construction of the AST, but before the compiler begins constructing its semantic understanding of the program, it will expand all macros.</p>
+
+<p>This involves traversing the AST, locating macro invocations and replacing them with their expansion.  In the case of non-macro syntax extensions, <em>how</em> this happens is up to the particular syntax extension.  That said, syntax extensions go through <em>exactly</em> the same process that macros do once their expansion is complete.</p>
+
+<p>Once the compiler has run a syntax extension, it expects the result to be parseable as one of a limited set of syntax elements, based on context.  For example, if you invoke a macro at module scope, the compiler will parse the result into an AST node that represents an item.  If you invoke a macro in expression position, the compiler will parse the result into an expression AST node.</p>
+
+<p>In fact, it can turn a syntax extension result into any of the following:</p>
+
+<ul>
+<li>an expression,</li>
+<li>a pattern,</li>
+<li>zero or more items,</li>
+<li>zero or more <code>impl</code> items, or</li>
+<li>zero or more statements.</li>
+</ul>
+
+<p>In other words, <em>where</em> you can invoke a macro determines what its result will be interpreted as.</p>
+
+<p>The compiler will take this AST node and completely replace the macro&#39;s invocation node with the output node.  <em>This is a structural operation</em>, not a textural one!</p>
+
+<p>For example, consider the following:</p>
+<span class='rusttest'>fn main() {
+    let eight = 2 * four!();
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='kw'>let</span> <span class='ident'>eight</span> <span class='op'>=</span> <span class='number'>2</span> <span class='op'>*</span> <span class='macro'>four</span><span class='macro'>!</span>();</pre>
+
+<p>We can visualise this partial AST as follows:</p>
+
+<pre><code class="language-text">┌─────────────┐
+│ Let         │
+│ name: eight │   ┌─────────┐
+│ init: ◌     │╶─╴│ BinOp   │
+└─────────────┘   │ op: Mul │
+                ┌╴│ lhs: ◌  │
+     ┌────────┐ │ │ rhs: ◌  │╶┐ ┌────────────┐
+     │ LitInt │╶┘ └─────────┘ └╴│ Macro      │
+     │ val: 2 │                 │ name: four │
+     └────────┘                 │ body: ()   │
+                                └────────────┘
+</code></pre>
+
+<p>From context, <code>four!()</code> <em>must</em> expand to an expression (the initialiser can <em>only</em> be an expression).  Thus, whatever the actual expansion is, it will be interpreted as a complete expression.  In this case, we will assume <code>four!</code> is defined such that it expands to the expression <code>1 + 3</code>.  As a result, expanding this invocation will result in the AST changing to:</p>
+
+<pre><code class="language-text">┌─────────────┐
+│ Let         │
+│ name: eight │   ┌─────────┐
+│ init: ◌     │╶─╴│ BinOp   │
+└─────────────┘   │ op: Mul │
+                ┌╴│ lhs: ◌  │
+     ┌────────┐ │ │ rhs: ◌  │╶┐ ┌─────────┐
+     │ LitInt │╶┘ └─────────┘ └╴│ BinOp   │
+     │ val: 2 │                 │ op: Add │
+     └────────┘               ┌╴│ lhs: ◌  │
+                   ┌────────┐ │ │ rhs: ◌  │╶┐ ┌────────┐
+                   │ LitInt │╶┘ └─────────┘ └╴│ LitInt │
+                   │ val: 1 │                 │ val: 3 │
+                   └────────┘                 └────────┘
+</code></pre>
+
+<p>This can be written out like so:</p>
+<span class='rusttest'>fn main() {
+    let eight = 2 * (1 + 3);
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='kw'>let</span> <span class='ident'>eight</span> <span class='op'>=</span> <span class='number'>2</span> <span class='op'>*</span> (<span class='number'>1</span> <span class='op'>+</span> <span class='number'>3</span>);</pre>
+
+<p>Note that we added parens <em>despite</em> them not being in the expansion.  Remember that the compiler always treats the expansion of a macro as a complete AST node, <strong>not</strong> as a mere sequence of tokens.  To put it another way, even if you don&#39;t explicitly wrap a complex expression in parentheses, there is no way for the compiler to &quot;misinterpret&quot; the result, or change the order of evaluation.</p>
+
+<p>It is important to understand that macro expansions are treated as AST nodes, as this design has two further implications:</p>
+
+<ul>
+<li>In addition to there being a limited number of invocation <em>positions</em>, macros can <em>only</em> expand to the kind of AST node the parser <em>expects</em> at that position.</li>
+<li>As a consequence of the above, macros <em>absolutely cannot</em> expand to incomplete or syntactically invalid constructs.</li>
+</ul>
+
+<p>There is one further thing to note about expansion: what happens when a syntax extension expands to something that contains <em>another</em> syntax extension invocation.  For example, consider an alternative definition of <code>four!</code>; what happens if it expands to <code>1 + three!()</code>?</p>
+<span class='rusttest'>fn main() {
+    let x = four!();
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='kw'>let</span> <span class='ident'>x</span> <span class='op'>=</span> <span class='macro'>four</span><span class='macro'>!</span>();</pre>
+
+<p>Expands to:</p>
+<span class='rusttest'>fn main() {
+    let x = 1 + three!();
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='kw'>let</span> <span class='ident'>x</span> <span class='op'>=</span> <span class='number'>1</span> <span class='op'>+</span> <span class='macro'>three</span><span class='macro'>!</span>();</pre>
+
+<p>This is resolved by the compiler checking the result of expansions for additional macro invocations, and expanding them.  Thus, a second expansion step turns the above into:</p>
+<span class='rusttest'>fn main() {
+    let x = 1 + 3;
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='kw'>let</span> <span class='ident'>x</span> <span class='op'>=</span> <span class='number'>1</span> <span class='op'>+</span> <span class='number'>3</span>;</pre>
+
+<p>The takeaway here is that expansion happens in &quot;passes&quot;; as many as is needed to completely expand all invocations.</p>
+
+<p>Well, not <em>quite</em>.  In fact, the compiler imposes an upper limit on the number of such recursive passes it is willing to run before giving up.  This is known as the macro recursion limit and defaults to 32.  If the 32nd expansion contains a macro invocation, the compiler will abort with an error indicating that the recursion limit was exceeded.</p>
+
+<p>This limit can be raised using the <code>#![recursion_limit=&quot;…&quot;]</code> attribute, though it <em>must</em> be done crate-wide.  Generally, it is recommended to try and keep macros below this limit wherever possible.</p>
+
+    <script type="text/javascript">
+        window.playgroundUrl = "http://play.rust-lang.org";
+    </script>
+    
+<script type="text/javascript">
+document.addEventListener("DOMContentLoaded", function(event) {
+  document.getElementById("toggle-nav").onclick = toggleNav;
+  function toggleNav() {
+    var toc = document.getElementById("toc");
+    var pagewrapper = document.getElementById("page-wrapper");
+    toggleClass(toc, "mobile-hidden");
+    toggleClass(pagewrapper, "mobile-hidden");
+  };
+
+  function toggleClass(el, className) {
+     // from http://youmightnotneedjquery.com/
+     if (el.classList) {
+       el.classList.toggle(className);
+     } else {
+       var classes = el.className.split(' ');
+       var existingIndex = classes.indexOf(className);
+
+       if (existingIndex >= 0) {
+         classes.splice(existingIndex, 1);
+       } else {
+         classes.push(className);
+       }
+
+       el.className = classes.join(' ');
+     }
+  }
+
+  // The below code is used to add prev and next navigation links to the bottom
+  // of each of the sections.
+  // It works by extracting the current page based on the url and iterates over
+  // the menu links until it finds the menu item for the current page. We then
+  // create a copy of the preceding and following menu links and add the
+  // correct css class and insert them into the bottom of the page.
+  var toc = document.getElementById('toc').getElementsByTagName('a');
+  var href = document.location.pathname.split('/').pop();
+  if (href === 'index.html' || href === '') {
+    href = 'README.html';
+  }
+
+  for (var i = 0; i < toc.length; i++) {
+    if (toc[i].attributes['href'].value.split('/').pop() === href) {
+      var nav = document.createElement('p');
+      if (i > 0) {
+        var prevNode = toc[i-1].cloneNode(true);
+        prevNode.className = 'left';
+        prevNode.setAttribute('rel', 'prev');
+        nav.appendChild(prevNode);
+      }
+      if (i < toc.length - 1) {
+        var nextNode = toc[i+1].cloneNode(true);
+        nextNode.className = 'right';
+        nextNode.setAttribute('rel', 'next');
+        nav.appendChild(nextNode);
+      }
+      document.getElementById('page').appendChild(nav);
+      break;
+    }
+  }
+
+});
+</script>
+<script type="text/javascript" src="playpen.js"></script>
+</div></div>
+
+
+</body>
+</html>

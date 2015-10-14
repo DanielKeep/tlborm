@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <title>Enum Parsing</title>
+
+    <link rel="stylesheet" type="text/css" href="rust-book.css">
+
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    <div id="nav">
+                <button id="toggle-nav">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                </button>
+              </div>
+<div id='toc' class='mobile-hidden'>
+<ul class='chapter'>
+<li><a  href='README.html'><b>1.</b> Introduction</a>
+</li>
+<li><a  href='mbe-README.html'><b>2.</b> Macros</a>
+<ul class='section'>
+<li><a  href='mbe-syn-README.html'><b>2.1.</b> Syntax Extensions</a>
+<ul class='section'>
+<li><a  href='mbe-syn-source-analysis.html'><b>2.1.1.</b> Source Analysis</a>
+</li>
+<li><a  href='mbe-syn-macros-in-the-ast.html'><b>2.1.2.</b> Macros in the AST</a>
+</li>
+<li><a  href='mbe-syn-expansion.html'><b>2.1.3.</b> Expansion</a>
+</li>
+</ul>
+</li>
+<li><a  href='mbe-macro-rules.html'><b>2.2.</b> macro_rules!</a>
+</li>
+<li><a  href='mbe-min-README.html'><b>2.3.</b> Minutiae</a>
+<ul class='section'>
+<li><a  href='mbe-min-captures-and-expansion-redux.html'><b>2.3.1.</b> Captures and Expansion Redux</a>
+</li>
+<li><a  href='mbe-min-hygiene.html'><b>2.3.2.</b> Hygiene</a>
+</li>
+<li><a  href='mbe-min-non-identifier-identifiers.html'><b>2.3.3.</b> Non-Identifier Identifiers</a>
+</li>
+<li><a  href='mbe-min-debugging.html'><b>2.3.4.</b> Debugging</a>
+</li>
+<li><a  href='mbe-min-scoping.html'><b>2.3.5.</b> Scoping</a>
+</li>
+<li><a  href='mbe-min-import-export.html'><b>2.3.6.</b> Import/Export</a>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a  href='pat-README.html'><b>3.</b> Patterns</a>
+<ul class='section'>
+<li><a  href='pat-callbacks.html'><b>3.1.</b> Callbacks</a>
+</li>
+<li><a  href='pat-incremental-tt-munchers.html'><b>3.2.</b> Incremental TT Munchers</a>
+</li>
+<li><a  href='pat-internal-rules.html'><b>3.3.</b> Internal Rules</a>
+</li>
+<li><a  href='pat-push-down-accumulation.html'><b>3.4.</b> Push-Down Accumulation</a>
+</li>
+<li><a  href='pat-repetition-replacement.html'><b>3.5.</b> Repetition Replacement</a>
+</li>
+<li><a  href='pat-trailing-separators.html'><b>3.6.</b> Trailing Separators</a>
+</li>
+<li><a  href='pat-tt-bundling.html'><b>3.7.</b> TT Bundling</a>
+</li>
+<li><a  href='pat-provisional.html'><b>3.8.</b> Provisional</a>
+</li>
+</ul>
+</li>
+<li><a  href='blk-README.html'><b>4.</b> Building Blocks</a>
+<ul class='section'>
+<li><a  href='blk-ast-coercion.html'><b>4.1.</b> AST Coercion</a>
+</li>
+<li><a  href='blk-counting.html'><b>4.2.</b> Counting</a>
+</li>
+<li><a class='active' href='blk-enum-parsing.html'><b>4.3.</b> Enum Parsing</a>
+</li>
+</ul>
+</li>
+<li><a  href='aeg-README.html'><b>5.</b> Annotated Examples</a>
+<ul class='section'>
+<li><a  href='aeg-ook.html'><b>5.1.</b> Ook!</a>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<div id='page-wrapper'>
+<div id='page'>
+
+
+    <h1 class="title">Enum Parsing</h1>
+    <span class='rusttest'>macro_rules! parse_unitary_variants {
+    (@as_expr $e:expr) =&gt; {$e};
+    (@as_item $($i:item)+) =&gt; {$($i)+};
+    
+    // Exit rules.
+    (
+        @collect_unitary_variants ($callback:ident ( $($args:tt)* )),
+        ($(,)*) -&gt; ($($var_names:ident,)*)
+    ) =&gt; {
+        parse_unitary_variants! {
+            @as_expr
+            $callback!{ $($args)* ($($var_names),*) }
+        }
+    };
+
+    (
+        @collect_unitary_variants ($callback:ident { $($args:tt)* }),
+        ($(,)*) -&gt; ($($var_names:ident,)*)
+    ) =&gt; {
+        parse_unitary_variants! {
+            @as_item
+            $callback!{ $($args)* ($($var_names),*) }
+        }
+    };
+
+    // Consume an attribute.
+    (
+        @collect_unitary_variants $fixed:tt,
+        (#[$_attr:meta] $($tail:tt)*) -&gt; ($($var_names:tt)*)
+    ) =&gt; {
+        parse_unitary_variants! {
+            @collect_unitary_variants $fixed,
+            ($($tail)*) -&gt; ($($var_names)*)
+        }
+    };
+
+    // Handle a variant, optionally with an with initialiser.
+    (
+        @collect_unitary_variants $fixed:tt,
+        ($var:ident $(= $_val:expr)*, $($tail:tt)*) -&gt; ($($var_names:tt)*)
+    ) =&gt; {
+        parse_unitary_variants! {
+            @collect_unitary_variants $fixed,
+            ($($tail)*) -&gt; ($($var_names)* $var,)
+        }
+    };
+
+    // Abort on variant with a payload.
+    (
+        @collect_unitary_variants $fixed:tt,
+        ($var:ident $_struct:tt, $($tail:tt)*) -&gt; ($($var_names:tt)*)
+    ) =&gt; {
+        const _error: () = &quot;cannot parse unitary variants from enum with non-unitary variants&quot;;
+    };
+    
+    // Entry rule.
+    (enum $name:ident {$($body:tt)*} =&gt; $callback:ident $arg:tt) =&gt; {
+        parse_unitary_variants! {
+            @collect_unitary_variants
+            ($callback $arg), ($($body)*,) -&gt; ()
+        }
+    };
+}
+
+fn main() {
+    assert_eq!(
+        parse_unitary_variants!(
+            enum Dummy { A, B, C }
+            =&gt; stringify(variants:)
+        ),
+        &quot;variants : ( A , B , C )&quot;
+    );
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>parse_unitary_variants</span> {
+    (<span class='kw-2'>@</span><span class='ident'>as_expr</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> {<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>};
+    (<span class='kw-2'>@</span><span class='ident'>as_item</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>:<span class='ident'>item</span>)<span class='op'>+</span>) <span class='op'>=&gt;</span> {$(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>)<span class='op'>+</span>};
+    
+    <span class='comment'>// Exit rules.</span>
+    (
+        <span class='kw-2'>@</span><span class='ident'>collect_unitary_variants</span> (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>callback</span>:<span class='ident'>ident</span> ( $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>args</span>:<span class='ident'>tt</span>)<span class='op'>*</span> )),
+        ($(,)<span class='op'>*</span>) <span class='op'>-&gt;</span> ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>var_names</span>:<span class='ident'>ident</span>,)<span class='op'>*</span>)
+    ) <span class='op'>=&gt;</span> {
+        <span class='macro'>parse_unitary_variants</span><span class='macro'>!</span> {
+            <span class='kw-2'>@</span><span class='ident'>as_expr</span>
+            <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>callback</span><span class='op'>!</span>{ $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>args</span>)<span class='op'>*</span> ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>var_names</span>),<span class='op'>*</span>) }
+        }
+    };
+
+    (
+        <span class='kw-2'>@</span><span class='ident'>collect_unitary_variants</span> (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>callback</span>:<span class='ident'>ident</span> { $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>args</span>:<span class='ident'>tt</span>)<span class='op'>*</span> }),
+        ($(,)<span class='op'>*</span>) <span class='op'>-&gt;</span> ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>var_names</span>:<span class='ident'>ident</span>,)<span class='op'>*</span>)
+    ) <span class='op'>=&gt;</span> {
+        <span class='macro'>parse_unitary_variants</span><span class='macro'>!</span> {
+            <span class='kw-2'>@</span><span class='ident'>as_item</span>
+            <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>callback</span><span class='op'>!</span>{ $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>args</span>)<span class='op'>*</span> ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>var_names</span>),<span class='op'>*</span>) }
+        }
+    };
+
+    <span class='comment'>// Consume an attribute.</span>
+    (
+        <span class='kw-2'>@</span><span class='ident'>collect_unitary_variants</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>fixed</span>:<span class='ident'>tt</span>,
+        (<span class='attribute'>#[<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>_attr</span>:<span class='ident'>meta</span>]</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>-&gt;</span> ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>var_names</span>:<span class='ident'>tt</span>)<span class='op'>*</span>)
+    ) <span class='op'>=&gt;</span> {
+        <span class='macro'>parse_unitary_variants</span><span class='macro'>!</span> {
+            <span class='kw-2'>@</span><span class='ident'>collect_unitary_variants</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>fixed</span>,
+            ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>)<span class='op'>*</span>) <span class='op'>-&gt;</span> ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>var_names</span>)<span class='op'>*</span>)
+        }
+    };
+
+    <span class='comment'>// Handle a variant, optionally with an with initialiser.</span>
+    (
+        <span class='kw-2'>@</span><span class='ident'>collect_unitary_variants</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>fixed</span>:<span class='ident'>tt</span>,
+        (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>var</span>:<span class='ident'>ident</span> $(<span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>_val</span>:<span class='ident'>expr</span>)<span class='op'>*</span>, $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>-&gt;</span> ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>var_names</span>:<span class='ident'>tt</span>)<span class='op'>*</span>)
+    ) <span class='op'>=&gt;</span> {
+        <span class='macro'>parse_unitary_variants</span><span class='macro'>!</span> {
+            <span class='kw-2'>@</span><span class='ident'>collect_unitary_variants</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>fixed</span>,
+            ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>)<span class='op'>*</span>) <span class='op'>-&gt;</span> ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>var_names</span>)<span class='op'>*</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>var</span>,)
+        }
+    };
+
+    <span class='comment'>// Abort on variant with a payload.</span>
+    (
+        <span class='kw-2'>@</span><span class='ident'>collect_unitary_variants</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>fixed</span>:<span class='ident'>tt</span>,
+        (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>var</span>:<span class='ident'>ident</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>_struct</span>:<span class='ident'>tt</span>, $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>-&gt;</span> ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>var_names</span>:<span class='ident'>tt</span>)<span class='op'>*</span>)
+    ) <span class='op'>=&gt;</span> {
+        <span class='kw'>const</span> <span class='ident'>_error</span>: () <span class='op'>=</span> <span class='string'>&quot;cannot parse unitary variants from enum with non-unitary variants&quot;</span>;
+    };
+    
+    <span class='comment'>// Entry rule.</span>
+    (<span class='kw'>enum</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>name</span>:<span class='ident'>ident</span> {$(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>body</span>:<span class='ident'>tt</span>)<span class='op'>*</span>} <span class='op'>=&gt;</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>callback</span>:<span class='ident'>ident</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>arg</span>:<span class='ident'>tt</span>) <span class='op'>=&gt;</span> {
+        <span class='macro'>parse_unitary_variants</span><span class='macro'>!</span> {
+            <span class='kw-2'>@</span><span class='ident'>collect_unitary_variants</span>
+            (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>callback</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>arg</span>), ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>body</span>)<span class='op'>*</span>,) <span class='op'>-&gt;</span> ()
+        }
+    };
+}</pre>
+
+<p>This macro shows how you can use an <a href="pat-incremental-tt-munchers.html">incremental tt muncher</a> and <a href="pat-push-down-accumulation.html">push-down accumulation</a> to parse the variants of an <code>enum</code> where all variants are unitary (<em>i.e.</em> they have no payload).  Upon completion, <code>parse_unitary_variants!</code> invokes a <a href="pat-callbacks.html">callback</a> macro with the list of variants (plus any other arbitrary arguments supplied).</p>
+
+<p>This can be modified to also parse <code>struct</code> fields, compute tag values for the variants, or even extract the names of <em>all</em> variants in an arbitrary <code>enum</code>.</p>
+
+    <script type="text/javascript">
+        window.playgroundUrl = "http://play.rust-lang.org";
+    </script>
+    
+<script type="text/javascript">
+document.addEventListener("DOMContentLoaded", function(event) {
+  document.getElementById("toggle-nav").onclick = toggleNav;
+  function toggleNav() {
+    var toc = document.getElementById("toc");
+    var pagewrapper = document.getElementById("page-wrapper");
+    toggleClass(toc, "mobile-hidden");
+    toggleClass(pagewrapper, "mobile-hidden");
+  };
+
+  function toggleClass(el, className) {
+     // from http://youmightnotneedjquery.com/
+     if (el.classList) {
+       el.classList.toggle(className);
+     } else {
+       var classes = el.className.split(' ');
+       var existingIndex = classes.indexOf(className);
+
+       if (existingIndex >= 0) {
+         classes.splice(existingIndex, 1);
+       } else {
+         classes.push(className);
+       }
+
+       el.className = classes.join(' ');
+     }
+  }
+
+  // The below code is used to add prev and next navigation links to the bottom
+  // of each of the sections.
+  // It works by extracting the current page based on the url and iterates over
+  // the menu links until it finds the menu item for the current page. We then
+  // create a copy of the preceding and following menu links and add the
+  // correct css class and insert them into the bottom of the page.
+  var toc = document.getElementById('toc').getElementsByTagName('a');
+  var href = document.location.pathname.split('/').pop();
+  if (href === 'index.html' || href === '') {
+    href = 'README.html';
+  }
+
+  for (var i = 0; i < toc.length; i++) {
+    if (toc[i].attributes['href'].value.split('/').pop() === href) {
+      var nav = document.createElement('p');
+      if (i > 0) {
+        var prevNode = toc[i-1].cloneNode(true);
+        prevNode.className = 'left';
+        prevNode.setAttribute('rel', 'prev');
+        nav.appendChild(prevNode);
+      }
+      if (i < toc.length - 1) {
+        var nextNode = toc[i+1].cloneNode(true);
+        nextNode.className = 'right';
+        nextNode.setAttribute('rel', 'next');
+        nav.appendChild(nextNode);
+      }
+      document.getElementById('page').appendChild(nav);
+      break;
+    }
+  }
+
+});
+</script>
+<script type="text/javascript" src="playpen.js"></script>
+</div></div>
+
+
+</body>
+</html>

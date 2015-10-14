@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <title>Source Analysis</title>
+
+    <link rel="stylesheet" type="text/css" href="rust-book.css">
+
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    <div id="nav">
+                <button id="toggle-nav">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                </button>
+              </div>
+<div id='toc' class='mobile-hidden'>
+<ul class='chapter'>
+<li><a  href='README.html'><b>1.</b> Introduction</a>
+</li>
+<li><a  href='mbe-README.html'><b>2.</b> Macros</a>
+<ul class='section'>
+<li><a  href='mbe-syn-README.html'><b>2.1.</b> Syntax Extensions</a>
+<ul class='section'>
+<li><a class='active' href='mbe-syn-source-analysis.html'><b>2.1.1.</b> Source Analysis</a>
+</li>
+<li><a  href='mbe-syn-macros-in-the-ast.html'><b>2.1.2.</b> Macros in the AST</a>
+</li>
+<li><a  href='mbe-syn-expansion.html'><b>2.1.3.</b> Expansion</a>
+</li>
+</ul>
+</li>
+<li><a  href='mbe-macro-rules.html'><b>2.2.</b> macro_rules!</a>
+</li>
+<li><a  href='mbe-min-README.html'><b>2.3.</b> Minutiae</a>
+<ul class='section'>
+<li><a  href='mbe-min-captures-and-expansion-redux.html'><b>2.3.1.</b> Captures and Expansion Redux</a>
+</li>
+<li><a  href='mbe-min-hygiene.html'><b>2.3.2.</b> Hygiene</a>
+</li>
+<li><a  href='mbe-min-non-identifier-identifiers.html'><b>2.3.3.</b> Non-Identifier Identifiers</a>
+</li>
+<li><a  href='mbe-min-debugging.html'><b>2.3.4.</b> Debugging</a>
+</li>
+<li><a  href='mbe-min-scoping.html'><b>2.3.5.</b> Scoping</a>
+</li>
+<li><a  href='mbe-min-import-export.html'><b>2.3.6.</b> Import/Export</a>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a  href='pat-README.html'><b>3.</b> Patterns</a>
+<ul class='section'>
+<li><a  href='pat-callbacks.html'><b>3.1.</b> Callbacks</a>
+</li>
+<li><a  href='pat-incremental-tt-munchers.html'><b>3.2.</b> Incremental TT Munchers</a>
+</li>
+<li><a  href='pat-internal-rules.html'><b>3.3.</b> Internal Rules</a>
+</li>
+<li><a  href='pat-push-down-accumulation.html'><b>3.4.</b> Push-Down Accumulation</a>
+</li>
+<li><a  href='pat-repetition-replacement.html'><b>3.5.</b> Repetition Replacement</a>
+</li>
+<li><a  href='pat-trailing-separators.html'><b>3.6.</b> Trailing Separators</a>
+</li>
+<li><a  href='pat-tt-bundling.html'><b>3.7.</b> TT Bundling</a>
+</li>
+<li><a  href='pat-provisional.html'><b>3.8.</b> Provisional</a>
+</li>
+</ul>
+</li>
+<li><a  href='blk-README.html'><b>4.</b> Building Blocks</a>
+<ul class='section'>
+<li><a  href='blk-ast-coercion.html'><b>4.1.</b> AST Coercion</a>
+</li>
+<li><a  href='blk-counting.html'><b>4.2.</b> Counting</a>
+</li>
+<li><a  href='blk-enum-parsing.html'><b>4.3.</b> Enum Parsing</a>
+</li>
+</ul>
+</li>
+<li><a  href='aeg-README.html'><b>5.</b> Annotated Examples</a>
+<ul class='section'>
+<li><a  href='aeg-ook.html'><b>5.1.</b> Ook!</a>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<div id='page-wrapper'>
+<div id='page'>
+
+
+    <h1 class="title">Source Analysis</h1>
+    <p>The first stage of compilation for a Rust program is tokenisation.  This is where the source text is transformed into a sequence of tokens (<em>i.e.</em> indivisible lexical units; the programming language equivalent of &quot;words&quot;).  Rust has various kinds of tokens, such as:</p>
+
+<ul>
+<li>Identifiers: <code>foo</code>, <code>Bambous</code>, <code>self</code>, <code>we_can_dance</code>, <code>LaCaravane</code>, …</li>
+<li>Integers: <code>42</code>, <code>72u32</code>, <code>0_______0</code>, …</li>
+<li>Keywords: <code>_</code>, <code>fn</code>, <code>self</code>, <code>match</code>, <code>yield</code>, <code>macro</code>, …</li>
+<li>Lifetimes: <code>&#39;a</code>, <code>&#39;b</code>, <code>&#39;a_rare_long_lifetime_name</code>, …</li>
+<li>Strings: <code>&quot;&quot;</code>, <code>&quot;Leicester&quot;</code>, <code>r##&quot;venezuelan beaver&quot;##</code>, …</li>
+<li>Symbols: <code>[</code>, <code>:</code>, <code>::</code>, <code>-&gt;</code>, <code>@</code>, <code>&lt;-</code>, …</li>
+</ul>
+
+<p>…among others.  There are some things to note about the above: first, <code>self</code> is both an identifier <em>and</em> a keyword.  In almost all cases, <code>self</code> is a keyword, but it <em>is</em> possible for it to be <em>treated</em> as an identifier, which will come up later (along with much cursing).  Secondly, the list of keywords includes some suspicious entries such as <code>yield</code> and <code>macro</code> that aren&#39;t <em>actually</em> in the language, but <em>are</em> parsed by the compiler—these are reserved for future use.  Third, the list of symbols <em>also</em> includes entries that aren&#39;t used by the language.  In the case of <code>&lt;-</code>, it is vestigial: it was removed from the grammar, but not from the lexer.  As a final point, note that <code>::</code> is a distinct token; it is not simply two adjacent <code>:</code> tokens.  The same is true of all multi-character symbol tokens in Rust, as of Rust 1.2. <sup id="fnref1"><a href="#fn1" rel="footnote">1</a></sup></p>
+
+<p>As a point of comparison, it is at <em>this</em> stage that some languages have their macro layer, though Rust does <em>not</em>.  For example, C/C++ macros are <em>effectively</em> processed at this point.<sup id="fnref2"><a href="#fn2" rel="footnote">2</a></sup>  This is why the following code works:<sup id="fnref3"><a href="#fn3" rel="footnote">3</a></sup></p>
+
+<pre><code class="language-c">#define SUB void
+#define BEGIN {
+#define END }
+
+SUB main() BEGIN
+    printf(&quot;Oh, the horror!\n&quot;);
+END
+</code></pre>
+
+<p>The next stage is parsing, where the stream of tokens is turned into an Abstract Syntax Tree (AST).  This involves building up the syntactic structure of the program in memory.  For example, the token sequence <code>1 + 2</code> is transformed into the equivalent of:</p>
+
+<pre><code class="language-text">┌─────────┐   ┌─────────┐
+│ BinOp   │ ┌╴│ LitInt  │
+│ op: Add │ │ │ val: 1  │
+│ lhs: ◌  │╶┘ └─────────┘
+│ rhs: ◌  │╶┐ ┌─────────┐
+└─────────┘ └╴│ LitInt  │
+              │ val: 2  │
+              └─────────┘
+</code></pre>
+
+<p>The AST contains the structure of the <em>entire</em> program, though it is based on purely <em>lexical</em> information.  For example, although the compiler may know that a particular expression is referring to a variable called &quot;<code>a</code>&quot;, at this stage, it has <em>no way</em> of knowing what &quot;<code>a</code>&quot; is, or even <em>where</em> it comes from.</p>
+
+<p>It is <em>after</em> the AST has been constructed that macros are processed.  However, before we can discuss that, we have to talk about token trees.</p>
+
+<h2 id="token-trees" class='section-header'><a
+                           href="#token-trees">Token trees</a></h2>
+<p>Token trees are somewhere between tokens and the AST.  Firstly, <em>almost</em> all tokens are also token trees; more specifically, they are <em>leaves</em>.  There is one other kind of thing that can be a token tree leaf, but we will come back to that later.</p>
+
+<p>The only basic tokens that are <em>not</em> leaves are the &quot;grouping&quot; tokens: <code>(...)</code>, <code>[...]</code>, and <code>{...}</code>.  These three are the <em>interior nodes</em> of token trees, and what give them their structure.  To give a concrete example, this sequence of tokens:</p>
+<span class='rusttest'>fn main() {
+    a + b + (c + d[0]) + e
+    
+}</span><pre class='rust rust-example-rendered'>
+<span class='ident'>a</span> <span class='op'>+</span> <span class='ident'>b</span> <span class='op'>+</span> (<span class='ident'>c</span> <span class='op'>+</span> <span class='ident'>d</span>[<span class='number'>0</span>]) <span class='op'>+</span> <span class='ident'>e</span></pre>
+
+<p>would be parsed into the following token trees:</p>
+
+<pre><code class="language-text">«a» «+» «b» «+» «(   )» «+» «e»
+          ╭────────┴──────────╮
+           «c» «+» «d» «[   ]»
+                        ╭─┴─╮
+                         «0»
+</code></pre>
+
+<p>Note that this has <em>no relationship</em> to the AST the expression would produce; instead of a single root node, there are <em>nine</em> token trees at the root level.  For reference, the AST would be:</p>
+
+<pre><code class="language-text">              ┌─────────┐
+              │ BinOp   │
+              │ op: Add │
+            ┌╴│ lhs: ◌  │
+┌─────────┐ │ │ rhs: ◌  │╶┐ ┌─────────┐
+│ Var     │╶┘ └─────────┘ └╴│ BinOp   │
+│ name: a │                 │ op: Add │
+└─────────┘               ┌╴│ lhs: ◌  │
+              ┌─────────┐ │ │ rhs: ◌  │╶┐ ┌─────────┐
+              │ Var     │╶┘ └─────────┘ └╴│ BinOp   │
+              │ name: b │                 │ op: Add │
+              └─────────┘               ┌╴│ lhs: ◌  │
+                            ┌─────────┐ │ │ rhs: ◌  │╶┐ ┌─────────┐
+                            │ BinOp   │╶┘ └─────────┘ └╴│ Var     │
+                            │ op: Add │                 │ name: e │
+                          ┌╴│ lhs: ◌  │                 └─────────┘
+              ┌─────────┐ │ │ rhs: ◌  │╶┐ ┌─────────┐
+              │ Var     │╶┘ └─────────┘ └╴│ Index   │
+              │ name: c │               ┌╴│ arr: ◌  │
+              └─────────┘   ┌─────────┐ │ │ ind: ◌  │╶┐ ┌─────────┐
+                            │ Var     │╶┘ └─────────┘ └╴│ LitInt  │
+                            │ name: d │                 │ val: 0  │
+                            └─────────┘                 └─────────┘
+</code></pre>
+
+<p>It is important to understand the distinction between the AST and token trees.  When writing macros, you have to deal with <em>both</em> as distinct things.</p>
+
+<p>One other aspect of this to note: it is <em>impossible</em> to have an unpaired paren, bracket or brace; nor is it possible to have incorrectly nested groups in a token tree.</p>
+
+<div class="footnotes">
+<hr>
+<ol>
+
+<li id="fn1">
+<p><code>@</code> has a purpose, though most people seem to forget about it completely: it is used in patterns to bind a non-terminal part of the pattern to a name.  Even a member of the Rust core team, proof-reading this chapter, who <em>specifically</em> brought up this section, didn&#39;t remember that <code>@</code> has a purpose.  Poor, poor swirly.&nbsp;<a href="#fnref1" rev="footnote">&#8617;</a></p>
+</li>
+
+<li id="fn2">
+<p>In fact, the C preprocessor uses a different lexical structure to C itself, but the distinction is <em>broadly</em> irrelevant.&nbsp;<a href="#fnref2" rev="footnote">&#8617;</a></p>
+</li>
+
+<li id="fn3">
+<p><em>Whether</em> it should work is an entirely <em>different</em> question.&nbsp;<a href="#fnref3" rev="footnote">&#8617;</a></p>
+</li>
+
+</ol>
+</div>
+
+    <script type="text/javascript">
+        window.playgroundUrl = "http://play.rust-lang.org";
+    </script>
+    
+<script type="text/javascript">
+document.addEventListener("DOMContentLoaded", function(event) {
+  document.getElementById("toggle-nav").onclick = toggleNav;
+  function toggleNav() {
+    var toc = document.getElementById("toc");
+    var pagewrapper = document.getElementById("page-wrapper");
+    toggleClass(toc, "mobile-hidden");
+    toggleClass(pagewrapper, "mobile-hidden");
+  };
+
+  function toggleClass(el, className) {
+     // from http://youmightnotneedjquery.com/
+     if (el.classList) {
+       el.classList.toggle(className);
+     } else {
+       var classes = el.className.split(' ');
+       var existingIndex = classes.indexOf(className);
+
+       if (existingIndex >= 0) {
+         classes.splice(existingIndex, 1);
+       } else {
+         classes.push(className);
+       }
+
+       el.className = classes.join(' ');
+     }
+  }
+
+  // The below code is used to add prev and next navigation links to the bottom
+  // of each of the sections.
+  // It works by extracting the current page based on the url and iterates over
+  // the menu links until it finds the menu item for the current page. We then
+  // create a copy of the preceding and following menu links and add the
+  // correct css class and insert them into the bottom of the page.
+  var toc = document.getElementById('toc').getElementsByTagName('a');
+  var href = document.location.pathname.split('/').pop();
+  if (href === 'index.html' || href === '') {
+    href = 'README.html';
+  }
+
+  for (var i = 0; i < toc.length; i++) {
+    if (toc[i].attributes['href'].value.split('/').pop() === href) {
+      var nav = document.createElement('p');
+      if (i > 0) {
+        var prevNode = toc[i-1].cloneNode(true);
+        prevNode.className = 'left';
+        prevNode.setAttribute('rel', 'prev');
+        nav.appendChild(prevNode);
+      }
+      if (i < toc.length - 1) {
+        var nextNode = toc[i+1].cloneNode(true);
+        nextNode.className = 'right';
+        nextNode.setAttribute('rel', 'next');
+        nav.appendChild(nextNode);
+      }
+      document.getElementById('page').appendChild(nav);
+      break;
+    }
+  }
+
+});
+</script>
+<script type="text/javascript" src="playpen.js"></script>
+</div></div>
+
+
+</body>
+</html>
