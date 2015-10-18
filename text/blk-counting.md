@@ -118,3 +118,29 @@ macro_rules! count_tts {
 This has been tested to work up to 10,000 tokens, and can probably go much higher.  The *downside* is that as of Rust 1.2, this *cannot* be used to produce a constant expression.  Although the result can be optimised to a simple constant (in debug builds it compiles down to a load from memory), it still cannot be used in constant positions (such as the value of `const`s, or a fixed array's size).
 
 However, if a non-constant count is acceptable, this is very much the preferred method.
+
+## Enum counting
+
+This approach can be used where you need to count a set of mutually distinct identifiers.  Additionally, the result of this approach is usable as a constant.
+
+```rust
+macro_rules! count_idents {
+    ($($idents:ident),* $(,)*) => {
+        {
+            #[allow(dead_code, non_camel_case_types)]
+            enum Idents { $($idents,)* __CountIdentsLast }
+            const COUNT: u32 = Idents::__CountIdentsLast as u32;
+            COUNT
+        }
+    };
+}
+# 
+# fn main() {
+#     const COUNT: u32 = count_idents!(A, B, C);
+#     assert_eq!(COUNT, 3);
+# }
+```
+
+This method does have two drawbacks.  First, as implied above, it can *only* count valid identifiers (which are also not keywords), and it does not allow those identifiers to repeat.
+
+Secondly, this approach is *not* hygienic, meaning that if whatever identifier you use in place of `__CountIdentsLast` is provided as input, the macro will fail due to the duplicate variants in the `enum`.

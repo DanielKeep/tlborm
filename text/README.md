@@ -8,7 +8,7 @@ If you wish to contribute, see [the GitHub repository](https://github.com/Daniel
 
 ## Thanks
 
-Thanks to the following for suggestions and corrections: IcyFoxy, Rym, TheMicroWorm, Yurume, akavel, cmr, ogham, and snake_case.
+Thanks to the following for suggestions and corrections: IcyFoxy, Rym, TheMicroWorm, Yurume, akavel, cmr, eddyb, ogham, and snake_case.
 
 ## License
 
