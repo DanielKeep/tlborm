@@ -285,6 +285,40 @@ fn main() {
 
 <p>However, if a non-constant count is acceptable, this is very much the preferred method.</p>
 
+<h2 id="enum-counting" class='section-header'><a
+                           href="#enum-counting">Enum counting</a></h2>
+<p>This approach can be used where you need to count a set of mutually distinct identifiers.  Additionally, the result of this approach is usable as a constant.</p>
+<span class='rusttest'>macro_rules! count_idents {
+    ($($idents:ident),* $(,)*) =&gt; {
+        {
+            #[allow(dead_code, non_camel_case_types)]
+            enum Idents { $($idents,)* __CountIdentsLast }
+            const COUNT: u32 = Idents::__CountIdentsLast as u32;
+            COUNT
+        }
+    };
+}
+
+fn main() {
+    const COUNT: u32 = count_idents!(A, B, C);
+    assert_eq!(COUNT, 3);
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>count_idents</span> {
+    ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>idents</span>:<span class='ident'>ident</span>),<span class='op'>*</span> $(,)<span class='op'>*</span>) <span class='op'>=&gt;</span> {
+        {
+            <span class='attribute'>#[<span class='ident'>allow</span>(<span class='ident'>dead_code</span>, <span class='ident'>non_camel_case_types</span>)]</span>
+            <span class='kw'>enum</span> <span class='ident'>Idents</span> { $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>idents</span>,)<span class='op'>*</span> <span class='ident'>__CountIdentsLast</span> }
+            <span class='kw'>const</span> <span class='ident'>COUNT</span>: <span class='ident'>u32</span> <span class='op'>=</span> <span class='ident'>Idents</span>::<span class='ident'>__CountIdentsLast</span> <span class='kw'>as</span> <span class='ident'>u32</span>;
+            <span class='ident'>COUNT</span>
+        }
+    };
+}</pre>
+
+<p>This method does have two drawbacks.  First, as implied above, it can <em>only</em> count valid identifiers (which are also not keywords), and it does not allow those identifiers to repeat.</p>
+
+<p>Secondly, this approach is <em>not</em> hygienic, meaning that if whatever identifier you use in place of <code>__CountIdentsLast</code> is provided as input, the macro will fail due to the duplicate variants in the <code>enum</code>.</p>
+
     <script type="text/javascript">
         window.playgroundUrl = "http://play.rust-lang.org";
     </script>
