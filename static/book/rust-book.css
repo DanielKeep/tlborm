@@ -18,7 +18,7 @@ body {
         padding: 10px 10px;
         font-size: 16px;
         background: none repeat scroll 0% 0% /*#FFF*/;
-        background-color: #111;
+        background-color: #1d1d1d;
         box-sizing: border-box;
         -webkit-overflow-scrolling: touch;
     }
@@ -32,7 +32,7 @@ body {
         bottom: 0px;
         box-sizing: border-box;
         background: none repeat scroll 0% 0% /*#FFF*/;
-        background-color: #111;
+        background-color: #1b1b1b;
         -webkit-overflow-scrolling: touch;
     }
 }
