@@ -22,6 +22,7 @@
     * [Repetition Replacement](pat-repetition-replacement.md)
     * [Trailing Separators](pat-trailing-separators.md)
     * [TT Bundling](pat-tt-bundling.md)
+    * [Visibility](pat-visibility.md)
     * [Provisional](pat-provisional.md)
 * [Building Blocks](blk-README.md)
     * [AST Coercion](blk-ast-coercion.md)
