@@ -80,7 +80,9 @@
 </li>
 <li><a  href='pat-tt-bundling.html'><b>4.7.</b> TT Bundling</a>
 </li>
-<li><a  href='pat-provisional.html'><b>4.8.</b> Provisional</a>
+<li><a  href='pat-visibility.html'><b>4.8.</b> Visibility</a>
+</li>
+<li><a  href='pat-provisional.html'><b>4.9.</b> Provisional</a>
 </li>
 </ul>
 </li>
@@ -126,8 +128,7 @@
 
 <p>Ook! is interesting because it is known to be Turing-complete, meaning that any environment in which you can implement it must <em>also</em> be Turing-complete.</p>
 
-<h2 id="implementation" class='section-header'><a
-                           href="#implementation">Implementation</a></h2><span class='rusttest'>fn main() {
+<h2 id='implementation' class='section-header'><a href='#implementation'>Implementation</a></h2><span class='rusttest'>fn main() {
     #![recursion_limit = &quot;158&quot;]
     
 }</span><pre class='rust rust-example-rendered'>
@@ -239,8 +240,7 @@
         }
     };</pre>
 
-<h3 id="opcode-parsing" class='section-header'><a
-                           href="#opcode-parsing">Opcode parsing</a></h3>
+<h3 id='opcode-parsing' class='section-header'><a href='#opcode-parsing'>Opcode parsing</a></h3>
 <p>Next are the &quot;execute&quot; rules, which are used to parse opcodes from the input.</p>
 
 <p>The general form of these rules is <code>(@e $syms; ($input))</code>.  As you can see from the <code>@start</code> rule, <code>$syms</code> is the collection of symbols needed to actually implement the program: input, output, the memory array, <em>etc.</em>.  We are using <a href="../pat/README.html#tt-bundling">TT bundling</a> to simplify forwarding of these symbols through later, intermediate rules.</p>
@@ -401,8 +401,7 @@
         <span class='macro'>Ook</span><span class='macro'>!</span>(<span class='kw-2'>@</span><span class='ident'>s</span> (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>a</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>inc</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>dec</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>r</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>w</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>re</span>); (); ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>)<span class='op'>*</span>));
     };</pre>
 
-<h3 id="loop-extraction" class='section-header'><a
-                           href="#loop-extraction">Loop extraction</a></h3>
+<h3 id='loop-extraction' class='section-header'><a href='#loop-extraction'>Loop extraction</a></h3>
 <p>Next are the <code>@x</code>, or &quot;extraction&quot;, rules.  These are responsible for taking an input tail and extracting the contents of a loop.  The general form of these rules is: <code>(@x $sym; $depth; $buf; $tail)</code>.</p>
 
 <p>The purpose of <code>$sym</code> is the same as above.  <code>$tail</code> is the input to be parsed, whilst <code>$buf</code> is a <a href="../pat/README.html#push-down-accumulation">push-down accumulation buffer</a> into which we will collect the opcodes that are inside the loop.  But what of <code>$depth</code>?</p>
@@ -486,8 +485,7 @@
         <span class='macro'>Ook</span><span class='macro'>!</span>(<span class='kw-2'>@</span><span class='ident'>x</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>syms</span>; <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>depth</span>; ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>buf</span>)<span class='op'>*</span> <span class='ident'>Ook</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>op0</span> <span class='ident'>Ook</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>op1</span>); ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>)<span class='op'>*</span>));
     };</pre>
 
-<h3 id="loop-skipping" class='section-header'><a
-                           href="#loop-skipping">Loop Skipping</a></h3>
+<h3 id='loop-skipping' class='section-header'><a href='#loop-skipping'>Loop Skipping</a></h3>
 <p>This is <em>broadly</em> the same as loop extraction, except we don&#39;t care about the <em>contents</em> of the loop (and as such, don&#39;t need the accumulation buffer).  All we need to know is when we are <em>past</em> the loop.  At that point, we resume processing the input using the <code>@e</code> rules.</p>
 
 <p>As such, these rules are presented without further exposition.</p>
@@ -549,8 +547,7 @@
         <span class='macro'>Ook</span><span class='macro'>!</span>(<span class='kw-2'>@</span><span class='ident'>s</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>syms</span>; ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>depth</span>)<span class='op'>*</span>); ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>)<span class='op'>*</span>));
     };</pre>
 
-<h3 id="entry-point" class='section-header'><a
-                           href="#entry-point">Entry point</a></h3>
+<h3 id='entry-point' class='section-header'><a href='#entry-point'>Entry point</a></h3>
 <p>This is the only non-internal rule.</p>
 
 <p>It is worth noting that because this formulation simply matches <em>all</em> tokens provided to it, it is <em>extremely dangerous</em>.  Any mistake can cause an invocation to fail to match all the above rules, thus falling down to this one and triggering an infinite recursion.</p>
@@ -568,8 +565,7 @@
     };
 }</pre>
 
-<h3 id="usage" class='section-header'><a
-                           href="#usage">Usage</a></h3>
+<h3 id='usage' class='section-header'><a href='#usage'>Usage</a></h3>
 <p>Here, finally, is our test program.</p>
 <span class='rusttest'>fn main() {
     let _ = Ook!(
@@ -666,8 +662,7 @@
 
 <p>With that, we have demonstrated the horrifying truth that <code>macro_rules!</code> is Turing-complete!</p>
 
-<h3 id="an-aside" class='section-header'><a
-                           href="#an-aside">An aside</a></h3>
+<h3 id='an-aside' class='section-header'><a href='#an-aside'>An aside</a></h3>
 <p>This was based on a macro implementing an isomorphic language called &quot;Hodor!&quot;.  Manish Goregaokar then <a href="https://www.reddit.com/r/rust/comments/39wvrm/hodor_esolang_as_a_rust_macro/cs76rqk?context=10000">implemented a Brainfuck interpreter using the Hodor! macro</a>.  So that is a Brainfuck interpreter written in Hodor! which was itself implemented using <code>macro_rules!</code>.</p>
 
 <p>Legend has it that after raising the recursion limit to <em>three million</em> and allowing it to run for <em>four days</em>, it finally finished.</p>

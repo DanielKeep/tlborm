@@ -80,7 +80,9 @@
 </li>
 <li><a  href='pat-tt-bundling.html'><b>4.7.</b> TT Bundling</a>
 </li>
-<li><a  href='pat-provisional.html'><b>4.8.</b> Provisional</a>
+<li><a  href='pat-visibility.html'><b>4.8.</b> Visibility</a>
+</li>
+<li><a  href='pat-provisional.html'><b>4.9.</b> Provisional</a>
 </li>
 </ul>
 </li>
@@ -108,8 +110,7 @@
 
     <h1 class="title">Counting</h1>
     
-<h2 id="repetition-with-replacement" class='section-header'><a
-                           href="#repetition-with-replacement">Repetition with replacement</a></h2>
+<h2 id='repetition-with-replacement' class='section-header'><a href='#repetition-with-replacement'>Repetition with replacement</a></h2>
 <p>Counting things in a macro is a surprisingly tricky task.  The simplest way is to use replacement with a repetition match.</p>
 <span class='rusttest'>macro_rules! replace_expr {
     ($_t:tt $sub:expr) =&gt; {$sub};
@@ -140,8 +141,7 @@ fn main() {
 
 <p>The compiler must parse this into an AST, which will produce what is effectively a perfectly unbalanced binary tree 500+ levels deep.</p>
 
-<h2 id="recursion" class='section-header'><a
-                           href="#recursion">Recursion</a></h2>
+<h2 id='recursion' class='section-header'><a href='#recursion'>Recursion</a></h2>
 <p>An older approach is to use recursion.</p>
 <span class='rusttest'>macro_rules! count_tts {
     () =&gt; {0usize};
@@ -258,8 +258,7 @@ fn main() {
 
 <p>This particular formulation will work up to ~1,200 tokens.</p>
 
-<h2 id="slice-length" class='section-header'><a
-                           href="#slice-length">Slice length</a></h2>
+<h2 id='slice-length' class='section-header'><a href='#slice-length'>Slice length</a></h2>
 <p>A third approach is to help the compiler construct a shallow AST that won&#39;t lead to a stack overflow.  This can be done by constructing an array literal and calling the <code>len</code> method.</p>
 <span class='rusttest'>macro_rules! replace_expr {
     ($_t:tt $sub:expr) =&gt; {$sub};
@@ -285,8 +284,7 @@ fn main() {
 
 <p>However, if a non-constant count is acceptable, this is very much the preferred method.</p>
 
-<h2 id="enum-counting" class='section-header'><a
-                           href="#enum-counting">Enum counting</a></h2>
+<h2 id='enum-counting' class='section-header'><a href='#enum-counting'>Enum counting</a></h2>
 <p>This approach can be used where you need to count a set of mutually distinct identifiers.  Additionally, the result of this approach is usable as a constant.</p>
 <span class='rusttest'>macro_rules! count_idents {
     ($($idents:ident),* $(,)*) =&gt; {

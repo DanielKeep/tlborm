@@ -80,7 +80,9 @@
 </li>
 <li><a  href='pat-tt-bundling.html'><b>4.7.</b> TT Bundling</a>
 </li>
-<li><a  href='pat-provisional.html'><b>4.8.</b> Provisional</a>
+<li><a  href='pat-visibility.html'><b>4.8.</b> Visibility</a>
+</li>
+<li><a  href='pat-provisional.html'><b>4.9.</b> Provisional</a>
 </li>
 </ul>
 </li>
@@ -147,8 +149,7 @@ END
 
 <p>It is <em>after</em> the AST has been constructed that macros are processed.  However, before we can discuss that, we have to talk about token trees.</p>
 
-<h2 id="token-trees" class='section-header'><a
-                           href="#token-trees">Token trees</a></h2>
+<h2 id='token-trees' class='section-header'><a href='#token-trees'>Token trees</a></h2>
 <p>Token trees are somewhere between tokens and the AST.  Firstly, <em>almost</em> all tokens are also token trees; more specifically, they are <em>leaves</em>.  There is one other kind of thing that can be a token tree leaf, but we will come back to that later.</p>
 
 <p>The only basic tokens that are <em>not</em> leaves are the &quot;grouping&quot; tokens: <code>(...)</code>, <code>[...]</code>, and <code>{...}</code>.  These three are the <em>interior nodes</em> of token trees, and what give them their structure.  To give a concrete example, this sequence of tokens:</p>

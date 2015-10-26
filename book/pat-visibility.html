@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <title>Visibility</title>
+
+    <link rel="stylesheet" type="text/css" href="rust-book.css">
+
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    <div id="nav">
+                <button id="toggle-nav">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                </button>
+              </div>
+<div id='toc' class='mobile-hidden'>
+<ul class='chapter'>
+<li><a  href='README.html'><b>1.</b> Introduction</a>
+</li>
+<li><a  href='mbe-README.html'><b>2.</b> Macros, A Methodical Introduction</a>
+<ul class='section'>
+<li><a  href='mbe-syn-README.html'><b>2.1.</b> Syntax Extensions</a>
+<ul class='section'>
+<li><a  href='mbe-syn-source-analysis.html'><b>2.1.1.</b> Source Analysis</a>
+</li>
+<li><a  href='mbe-syn-macros-in-the-ast.html'><b>2.1.2.</b> Macros in the AST</a>
+</li>
+<li><a  href='mbe-syn-expansion.html'><b>2.1.3.</b> Expansion</a>
+</li>
+</ul>
+</li>
+<li><a  href='mbe-macro-rules.html'><b>2.2.</b> macro_rules!</a>
+</li>
+<li><a  href='mbe-min-README.html'><b>2.3.</b> Minutiae</a>
+<ul class='section'>
+<li><a  href='mbe-min-captures-and-expansion-redux.html'><b>2.3.1.</b> Captures and Expansion Redux</a>
+</li>
+<li><a  href='mbe-min-hygiene.html'><b>2.3.2.</b> Hygiene</a>
+</li>
+<li><a  href='mbe-min-non-identifier-identifiers.html'><b>2.3.3.</b> Non-Identifier Identifiers</a>
+</li>
+<li><a  href='mbe-min-debugging.html'><b>2.3.4.</b> Debugging</a>
+</li>
+<li><a  href='mbe-min-scoping.html'><b>2.3.5.</b> Scoping</a>
+</li>
+<li><a  href='mbe-min-import-export.html'><b>2.3.6.</b> Import/Export</a>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a  href='pim-README.html'><b>3.</b> Macros, A Practical Introduction</a>
+</li>
+<li><a  href='pat-README.html'><b>4.</b> Patterns</a>
+<ul class='section'>
+<li><a  href='pat-callbacks.html'><b>4.1.</b> Callbacks</a>
+</li>
+<li><a  href='pat-incremental-tt-munchers.html'><b>4.2.</b> Incremental TT Munchers</a>
+</li>
+<li><a  href='pat-internal-rules.html'><b>4.3.</b> Internal Rules</a>
+</li>
+<li><a  href='pat-push-down-accumulation.html'><b>4.4.</b> Push-Down Accumulation</a>
+</li>
+<li><a  href='pat-repetition-replacement.html'><b>4.5.</b> Repetition Replacement</a>
+</li>
+<li><a  href='pat-trailing-separators.html'><b>4.6.</b> Trailing Separators</a>
+</li>
+<li><a  href='pat-tt-bundling.html'><b>4.7.</b> TT Bundling</a>
+</li>
+<li><a class='active' href='pat-visibility.html'><b>4.8.</b> Visibility</a>
+</li>
+<li><a  href='pat-provisional.html'><b>4.9.</b> Provisional</a>
+</li>
+</ul>
+</li>
+<li><a  href='blk-README.html'><b>5.</b> Building Blocks</a>
+<ul class='section'>
+<li><a  href='blk-ast-coercion.html'><b>5.1.</b> AST Coercion</a>
+</li>
+<li><a  href='blk-counting.html'><b>5.2.</b> Counting</a>
+</li>
+<li><a  href='blk-enum-parsing.html'><b>5.3.</b> Enum Parsing</a>
+</li>
+</ul>
+</li>
+<li><a  href='aeg-README.html'><b>6.</b> Annotated Examples</a>
+<ul class='section'>
+<li><a  href='aeg-ook.html'><b>6.1.</b> Ook!</a>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<div id='page-wrapper'>
+<div id='page'>
+
+
+    <h1 class="title">Visibility</h1>
+    <p>Matching and substituting visibility can be tricky in Rust, due to the absence of any kind of <code>vis</code> matcher.</p>
+
+<h2 id='matching-and-ignoring' class='section-header'><a href='#matching-and-ignoring'>Matching and Ignoring</a></h2>
+<p>Depending on context, this can be done using a repetition:</p>
+<span class='rusttest'>macro_rules! struct_name {
+    ($(pub)* struct $name:ident $($rest:tt)*) =&gt; { stringify!($name) };
+}
+
+fn main() {
+    assert_eq!(struct_name!(pub struct Jim;), &quot;Jim&quot;);
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>struct_name</span> {
+    ($(<span class='kw'>pub</span>)<span class='op'>*</span> <span class='kw'>struct</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>name</span>:<span class='ident'>ident</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>rest</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>=&gt;</span> { <span class='macro'>stringify</span><span class='macro'>!</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>name</span>) };
+}</pre>
+
+<p>The above example will match <code>struct</code> items that are private or public.  Or <code>pub pub</code> (very public), or even <code>pub pub pub pub</code> (really very quite public).  The best defense against this is to simply hope that people using the macro are not excessively silly.</p>
+
+<h2 id='matching-and-substituting' class='section-header'><a href='#matching-and-substituting'>Matching and Substituting</a></h2>
+<p>Because you cannot bind a repetition in and of itself to a variable, there is no way to store the contents of <code>$(pub)*</code> such that it can be substituted.  As a result, multiple rules are needed.</p>
+<span class='rusttest'>macro_rules! newtype_new {
+    (struct $name:ident($t:ty);) =&gt; { newtype_new! { () struct $name($t); } };
+    (pub struct $name:ident($t:ty);) =&gt; { newtype_new! { (pub) struct $name($t); } };
+    
+    (($($vis:tt)*) struct $name:ident($t:ty);) =&gt; {
+        as_item! {
+            impl $name {
+                $($vis)* fn new(value: $t) -&gt; Self {
+                    $name(value)
+                }
+            }
+        }
+    };
+}
+
+macro_rules! as_item { ($i:item) =&gt; {$i} }
+
+#[derive(Debug, Eq, PartialEq)]
+struct Dummy(i32);
+
+newtype_new! { struct Dummy(i32); }
+
+fn main() {
+    assert_eq!(Dummy::new(42), Dummy(42));
+}
+</span><pre class='rust rust-example-rendered'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>newtype_new</span> {
+    (<span class='kw'>struct</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>name</span>:<span class='ident'>ident</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>:<span class='ident'>ty</span>);) <span class='op'>=&gt;</span> { <span class='macro'>newtype_new</span><span class='macro'>!</span> { () <span class='kw'>struct</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>name</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>); } };
+    (<span class='kw'>pub</span> <span class='kw'>struct</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>name</span>:<span class='ident'>ident</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>:<span class='ident'>ty</span>);) <span class='op'>=&gt;</span> { <span class='macro'>newtype_new</span><span class='macro'>!</span> { (<span class='kw'>pub</span>) <span class='kw'>struct</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>name</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>); } };
+    
+    (($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>vis</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='kw'>struct</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>name</span>:<span class='ident'>ident</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>:<span class='ident'>ty</span>);) <span class='op'>=&gt;</span> {
+        <span class='macro'>as_item</span><span class='macro'>!</span> {
+            <span class='kw'>impl</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>name</span> {
+                $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>vis</span>)<span class='op'>*</span> <span class='kw'>fn</span> <span class='ident'>new</span>(<span class='ident'>value</span>: <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>t</span>) <span class='op'>-&gt;</span> <span class='kw'>Self</span> {
+                    <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>name</span>(<span class='ident'>value</span>)
+                }
+            }
+        }
+    };
+}
+
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>as_item</span> { (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>:<span class='ident'>item</span>) <span class='op'>=&gt;</span> {<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>} }</pre>
+
+<blockquote>
+<p><strong>See also</strong>: <a href="blk-ast-coercion.html">AST Coercion</a>.</p>
+</blockquote>
+
+<p>In this case, we are using the ability to match an arbitrary sequence of tokens inside a group to match either <code>()</code> or <code>(pub)</code>, then substitute the contents into the output.  Because the parser will not expect a <code>tt</code> repetition expansion in this position, we need to use <a href="blk-ast-coercion.html">AST coercion</a> to get the expansion to parse correctly.</p>
+
+<p>If you wish to match multiple visibility qualifiers, you will need to decide between breaking the macro into multiple, recursive steps <em>or</em> writing 2<sup><em>N</em></sup> rules for <em>N</em> positions.</p>
+
+    <script type="text/javascript">
+        window.playgroundUrl = "http://play.rust-lang.org";
+    </script>
+    
+<script type="text/javascript">
+document.addEventListener("DOMContentLoaded", function(event) {
+  document.getElementById("toggle-nav").onclick = toggleNav;
+  function toggleNav() {
+    var toc = document.getElementById("toc");
+    var pagewrapper = document.getElementById("page-wrapper");
+    toggleClass(toc, "mobile-hidden");
+    toggleClass(pagewrapper, "mobile-hidden");
+  };
+
+  function toggleClass(el, className) {
+     // from http://youmightnotneedjquery.com/
+     if (el.classList) {
+       el.classList.toggle(className);
+     } else {
+       var classes = el.className.split(' ');
+       var existingIndex = classes.indexOf(className);
+
+       if (existingIndex >= 0) {
+         classes.splice(existingIndex, 1);
+       } else {
+         classes.push(className);
+       }
+
+       el.className = classes.join(' ');
+     }
+  }
+
+  // The below code is used to add prev and next navigation links to the bottom
+  // of each of the sections.
+  // It works by extracting the current page based on the url and iterates over
+  // the menu links until it finds the menu item for the current page. We then
+  // create a copy of the preceding and following menu links and add the
+  // correct css class and insert them into the bottom of the page.
+  var toc = document.getElementById('toc').getElementsByTagName('a');
+  var href = document.location.pathname.split('/').pop();
+  if (href === 'index.html' || href === '') {
+    href = 'README.html';
+  }
+
+  for (var i = 0; i < toc.length; i++) {
+    if (toc[i].attributes['href'].value.split('/').pop() === href) {
+      var nav = document.createElement('p');
+      if (i > 0) {
+        var prevNode = toc[i-1].cloneNode(true);
+        prevNode.className = 'left';
+        prevNode.setAttribute('rel', 'prev');
+        nav.appendChild(prevNode);
+      }
+      if (i < toc.length - 1) {
+        var nextNode = toc[i+1].cloneNode(true);
+        nextNode.className = 'right';
+        nextNode.setAttribute('rel', 'next');
+        nav.appendChild(nextNode);
+      }
+      document.getElementById('page').appendChild(nav);
+      break;
+    }
+  }
+
+});
+</script>
+<script type="text/javascript" src="playpen.js"></script>
+</div></div>
+
+
+</body>
+</html>

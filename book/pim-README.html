@@ -80,7 +80,9 @@
 </li>
 <li><a  href='pat-tt-bundling.html'><b>4.7.</b> TT Bundling</a>
 </li>
-<li><a  href='pat-provisional.html'><b>4.8.</b> Provisional</a>
+<li><a  href='pat-visibility.html'><b>4.8.</b> Visibility</a>
+</li>
+<li><a  href='pat-provisional.html'><b>4.9.</b> Provisional</a>
 </li>
 </ul>
 </li>
@@ -111,8 +113,7 @@
 
 <p>There is also the <a href="http://doc.rust-lang.org/book/macros.html">Macros chapter of the Rust Book</a> which is another high-level explanation, and the <a href="mbe-README.html">methodical introduction</a> chapter of this book, which explains the macro system in detail.</p>
 
-<h2 id="a-little-context" class='section-header'><a
-                           href="#a-little-context">A Little Context</a></h2>
+<h2 id='a-little-context' class='section-header'><a href='#a-little-context'>A Little Context</a></h2>
 <blockquote>
 <p><strong>Note</strong>: don&#39;t panic!  What follows is the only math will be talked about.  You can quite safely skip this section if you just want to get to the meat of the article.</p>
 </blockquote>
@@ -181,8 +182,7 @@
 
 <p>So, with all that having been said, let&#39;s get started.</p>
 
-<h2 id="construction" class='section-header'><a
-                           href="#construction">Construction</a></h2>
+<h2 id='construction' class='section-header'><a href='#construction'>Construction</a></h2>
 <p>Usually, when working on a new macro, the first thing I do is decide what the macro invocation should look like.  In this specific case, my first attempt looked like this:</p>
 <span class='rusttest'>fn main() {
     let fib = recurrence![a[n] = 0, 1, ..., a[n-1] + a[n-2]];
@@ -583,8 +583,7 @@ for e in fib.take(10) { println!(&quot;{}&quot;, e) }
 <p>A complete list can be found in <a href="mbe-min-captures-and-expansion-redux.html">Macros, A Methodical Introduction; Minutiae; Captures and Expansion Redux</a>.</p>
 </blockquote>
 
-<h2 id="indexing-and-shuffling" class='section-header'><a
-                           href="#indexing-and-shuffling">Indexing and Shuffling</a></h2>
+<h2 id='indexing-and-shuffling' class='section-header'><a href='#indexing-and-shuffling'>Indexing and Shuffling</a></h2>
 <p>I will skim a bit over this part, since it&#39;s effectively tangential to the macro stuff.  We want to make it so that the user can access previous values in the sequence by indexing <code>a</code>; we want it to act as a sliding window keeping the last few (in this case, 2) elements of the sequence.</p>
 
 <p>We can do this pretty easily with a wrapper type:</p>
@@ -1053,8 +1052,7 @@ fn main() {
 
 <p>Success!  We can now start replacing things in the <em>expansion</em> with things we&#39;ve <em>captured</em>.</p>
 
-<h3 id="substitution" class='section-header'><a
-                           href="#substitution">Substitution</a></h3>
+<h3 id='substitution' class='section-header'><a href='#substitution'>Substitution</a></h3>
 <p>Substituting something you&#39;ve captured in a macro is quite simple; you can insert the contents of a capture <code>$sty:ty</code> by using <code>$sty</code>.  So, let&#39;s go through and fix the <code>u64</code>s:</p>
 <span class='rusttest'>macro_rules! recurrence {
     ( a[n]: $sty:ty = $($inits:expr),+ ... $recur:expr ) =&gt; {
@@ -1840,8 +1838,7 @@ fn main() {
 <p><strong>Aside</strong>: You can&#39;t compile the above with a non-nightly build of <code>rustc</code>.  This is because the expansion of the <code>println!</code> macro depends on internal compiler details which are <em>not</em> publicly stabilised.</p>
 </blockquote>
 
-<h3 id="being-hygienic" class='section-header'><a
-                           href="#being-hygienic">Being Hygienic</a></h3>
+<h3 id='being-hygienic' class='section-header'><a href='#being-hygienic'>Being Hygienic</a></h3>
 <p>The issue here is that identifiers in Rust macros are <em>hygienic</em>.  That is, identifiers from two different contexts <em>cannot</em> collide.  To show the difference, let&#39;s take a simpler example.</p>
 <span class='rusttest'>/*
 macro_rules! using_a {

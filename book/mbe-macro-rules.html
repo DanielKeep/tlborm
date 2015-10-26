@@ -80,7 +80,9 @@
 </li>
 <li><a  href='pat-tt-bundling.html'><b>4.7.</b> TT Bundling</a>
 </li>
-<li><a  href='pat-provisional.html'><b>4.8.</b> Provisional</a>
+<li><a  href='pat-visibility.html'><b>4.8.</b> Visibility</a>
+</li>
+<li><a  href='pat-provisional.html'><b>4.9.</b> Provisional</a>
 </li>
 </ul>
 </li>
@@ -137,8 +139,7 @@
 
 <p>If you are wondering, the <code>macro_rules!</code> invocation expands to... <em>nothing</em>.  At least, nothing that appears in the AST; rather, it manipulates compiler-internal structures to register the macro.  As such, you can <em>technically</em> use <code>macro_rules!</code> in any position where an empty expansion is valid.</p>
 
-<h2 id="matching" class='section-header'><a
-                           href="#matching">Matching</a></h2>
+<h2 id='matching' class='section-header'><a href='#matching'>Matching</a></h2>
 <p>When a macro is invoked, the <code>macro_rules!</code> interpreter goes through the rules one by one, in lexical order.  For each rule, it tries to match the contents of the input token tree against that rule&#39;s <code>pattern</code>.  A pattern must match the <em>entirety</em> of the input to be considered a match.</p>
 
 <p>If the input matches the pattern, the invocation is replaced by the <code>expansion</code>; otherwise, the next rule is tried.  If all rules fail to match, macro expansion fails with an error.</p>
@@ -171,8 +172,7 @@
 
 <p>You can use any token tree that you can write.</p>
 
-<h2 id="captures" class='section-header'><a
-                           href="#captures">Captures</a></h2>
+<h2 id='captures' class='section-header'><a href='#captures'>Captures</a></h2>
 <p>Patterns can also contain captures.  These allow input to be matched based on some general grammar category, with the result captured to a variable which can then be substituted into the output.</p>
 
 <p>Captures are written as a dollar (<code>$</code>) followed by an identifier, a colon (<code>:</code>), and finally the kind of capture, which must be one of the following:</p>
@@ -229,8 +229,7 @@
     (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>a</span>:<span class='ident'>expr</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>b</span>:<span class='ident'>expr</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>c</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> {<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>a</span> <span class='op'>*</span> (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>b</span> <span class='op'>+</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>c</span>)};
 }</pre>
 
-<h2 id="repetitions" class='section-header'><a
-                           href="#repetitions">Repetitions</a></h2>
+<h2 id='repetitions' class='section-header'><a href='#repetitions'>Repetitions</a></h2>
 <p>Patterns can contain repetitions.  These allow a sequence of tokens to be matched.  These have the general form <code>$ ( ... ) sep rep</code>.</p>
 
 <ul>
