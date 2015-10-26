@@ -54,6 +54,4 @@ macro_rules! as_item { ($i:item) => {$i} }
 
 In this case, we are using the ability to match an arbitrary sequence of tokens inside a group to match either `()` or `(pub)`, then substitute the contents into the output.  Because the parser will not expect a `tt` repetition expansion in this position, we need to use [AST coercion] to get the expansion to parse correctly.
 
-If you wish to match multiple visibility qualifiers, you will need to decide between breaking the macro into multiple, recursive steps *or* writing 2<sup><em>N</em></sup> rules for <em>N</em> positions.
-
 [AST Coercion]: blk-ast-coercion.html
