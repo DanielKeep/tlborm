@@ -59,7 +59,7 @@
 
 body {
     /*background-color: white;*/
-    background-color: #111;
+    background-color: #1b1b1b;
     margin: 0 auto;
     padding: 0 15px;
     font-family: "Source Serif Pro", Georgia, Times, "Times New Roman", serif;
@@ -212,7 +212,7 @@ pre, code {
     word-wrap: break-word;
 }
 pre {
-    background-color: #222;
+    background-color: #222222;
     color: #f8f8f2;
     /*border-left: 2px solid #eee;*/
     border-left: 2px solid #666;
@@ -231,7 +231,7 @@ code {
     padding: 0 2px;
     color: #E1D4A9;
     font-size: 13px;
-    background-color: #222;
+    background-color: #222222;
     border-bottom: 1px solid #181818;
 }
 pre code {
@@ -308,7 +308,7 @@ blockquote {
     margin: 20px 0;
     padding: 15px 20px;
     /*background-color: #f2f7f9;*/
-    background-color: #181818;
+    background-color: #1d1d1d;
     /*border-top: .1em solid #e5eef2;
     border-bottom: .1em solid #e5eef2;*/
     border-top: .1em solid #666;
