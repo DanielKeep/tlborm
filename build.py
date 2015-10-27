@@ -5,6 +5,7 @@ OUT_PATH = 'target'
 BOOK_OUT_PATH = OUT_PATH + '/book'
 STATIC_PATH = 'static'
 RUSTBOOK_OUT_PATH = '_book'
+REDIRECTS = 'redirects.json'
 
 PUBLISH_BRANCH = 'gh-pages'
 
@@ -12,6 +13,7 @@ TEMP_PREFIX = 'tlborm-build-'
 WATCH_DELAY = 0.25 # sec
 WATCH_SLEEP = 0.5 # sec
 
+import json
 import os
 import re
 import shutil
@@ -23,6 +25,38 @@ from contextlib import contextmanager, ExitStack
 from itertools import chain
 
 TRACE = os.environ.get('TLBORM_TRACE_BUILD', '') != ''
+
+REDIRECT_TEMPLATE = """<!DOCTYPE HTML>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>The Little Book of Rust Macros</title>
+    <link rel="stylesheet" type="text/css" href="rust-book.css">
+    <style type="text/css">
+
+    body {
+        position: absolute;
+        top: 50%%;
+        left: 50%%;
+        margin-right: -50%%;
+        transform: translate(-50%%, -50%%);
+    }
+
+    body > p:first-of-type {
+        text-align: center;
+    }
+
+    </style>
+    <meta http-equiv="refresh" content="0; url=%(dest)s">
+</head>
+<body>
+
+<h1><a href="%(dest)s">Content Moved</a></h1>
+<p><a href="%(dest)s">Follow the redirection</a> if it does not work automatically.</p>
+
+</body>
+</html>
+"""
 
 def main():
     args = sys.argv[1:]
@@ -58,9 +92,28 @@ def build():
     if os.path.exists(OUT_PATH):
         really_rmtree(OUT_PATH)
 
+    gen_redirs()
+
     copy_merge(src=RUSTBOOK_OUT_PATH, dst=BOOK_OUT_PATH)
     copy_merge(src=STATIC_PATH, dst=OUT_PATH)
     msg('.. done.')
+
+def gen_redirs():
+    msg_trace('.. generating redirects...')
+    base_path = BOOK_OUT_PATH
+    redirs = json.loads(open(REDIRECTS, 'rt').read())
+    for entry in redirs:
+        src = entry[0]
+        dst = entry[1]
+        rel = os.path.relpath(dst, os.path.dirname(src))
+        msg_trace('   .. %s -> %s / %s' % (src, dst, rel))
+
+        page = REDIRECT_TEMPLATE % {'dest': rel+'.html'}
+        redir = os.path.join(base_path, src+'.html')
+        redir_dir = os.path.dirname(redir)
+        if not os.path.exists(redir_dir): os.makedirs(redir_dir)
+        open(redir, 'wt').write(page)
+    msg_trace('   .. done.')
 
 def do_open():
     msg('Opening...')
