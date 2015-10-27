@@ -885,6 +885,8 @@ macro_rules! count_exprs {
 # }
 ```
 
+> **<abbr title="Just for this example">JFTE</abbr>**: this is not the *only*, or even the *best* way of counting things.  You may wish to peruse the [Counting](blk-counting.html) section later.
+
 With this, we can now modify `recurrence` to determine the necessary size of `mem`.
 
 ```rust
