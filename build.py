@@ -31,7 +31,7 @@ REDIRECT_TEMPLATE = """<!DOCTYPE HTML>
 <head>
     <meta charset="UTF-8">
     <title>The Little Book of Rust Macros</title>
-    <link rel="stylesheet" type="text/css" href="rust-book.css">
+    <link rel="stylesheet" type="text/css" href="%(rel)s/rust-book.css">
     <style type="text/css">
 
     body {
@@ -106,9 +106,12 @@ def gen_redirs():
         src = entry[0]
         dst = entry[1]
         rel = os.path.relpath(dst, os.path.dirname(src))
+        rel = rel.replace("\\", "/")
         msg_trace('   .. %s -> %s / %s' % (src, dst, rel))
 
-        page = REDIRECT_TEMPLATE % {'dest': rel+'.html'}
+        rel_base = os.path.dirname(rel) or '.'
+
+        page = REDIRECT_TEMPLATE % {'dest': rel+'.html', 'rel': rel_base}
         redir = os.path.join(base_path, src+'.html')
         redir_dir = os.path.dirname(redir)
         if not os.path.exists(redir_dir): os.makedirs(redir_dir)
