@@ -18,7 +18,7 @@ macro_rules! count_tts {
 # }
 ```
 
-This is much better, but will likely *crash the compiler* with inputs of around 500 or so tokens.  Consider that the output will look something like this:
+This is a fine approach for smallish numbers, but will likely *crash the compiler* with inputs of around 500 or so tokens.  Consider that the output will look something like this:
 
 ```ignore
 0usize + 1usize + /* ~500 `+ 1usize`s */ + 1usize
