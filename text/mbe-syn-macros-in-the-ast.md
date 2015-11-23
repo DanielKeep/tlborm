@@ -84,6 +84,8 @@ Some things *not* on this list:
 * Identifiers
 * Match arms
 * Struct fields
-* Types
+* Types[^type-macros]
+
+[^type-macros]: Type macros are available in unstable Rust with `#![feature(type_macros)]`.
 
 There is absolutely, definitely *no way* to use macros in any position *not* on the first list.
