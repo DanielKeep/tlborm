@@ -86,6 +86,6 @@ Some things *not* on this list:
 * Struct fields
 * Types[^type-macros]
 
-[^type-macros]: Type macros are available in unstable Rust with `#![feature(type_macros)]`.
+[^type-macros]: Type macros are available in unstable Rust with `#![feature(type_macros)]`; see [Issue #27336](https://github.com/rust-lang/rust/issues/27336).
 
 There is absolutely, definitely *no way* to use macros in any position *not* on the first list.
