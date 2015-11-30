@@ -19,8 +19,8 @@ macro_rules! as_stmt { ($s:stmt) => {$s} }
 
 These coercions are often used with [push-down accumulation] macros in order to get the parser to treat the final `tt` sequence as a particular kind of grammar construct.
 
-Note that this specific set of macros is determined by what macros are allowed to expand to, *not* what they are able to capture.  That is, because macros cannot appear in type position[^issue-27336], you cannot have an `as_ty!` macro.
+Note that this specific set of macros is determined by what macros are allowed to expand to, *not* what they are able to capture.  That is, because macros cannot appear in type position[^issue-27245], you cannot have an `as_ty!` macro.
 
 [push-down accumulation]: pat-push-down-accumulation.html
 
-[^issue-27336]: See [Issue #27336](https://github.com/rust-lang/rust/issues/27336).
+[^issue-27245]: See [Issue #27245](https://github.com/rust-lang/rust/issues/27245).
