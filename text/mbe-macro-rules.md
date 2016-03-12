@@ -58,7 +58,7 @@ Patterns can also contain captures.  These allow input to be matched based on so
 Captures are written as a dollar (`$`) followed by an identifier, a colon (`:`), and finally the kind of capture, which must be one of the following:
 
 * `item`: an item, like a function, struct, module, etc.
-* `block`: a block (i.e. a block of statments and/or an expression, surrounded by braces)
+* `block`: a block (i.e. a block of statements and/or an expression, surrounded by braces)
 * `stmt`: a statement
 * `pat`: a pattern
 * `expr`: an expression
