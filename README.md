@@ -4,6 +4,8 @@
 
 This book is an attempt to distil the Rust community's collective knowledge of Rust macros.  As such, both additions (in the form of pull requests) and requests (in the form of issues) are welcome.
 
+You can see the book on the [link](https://danielkeep.github.io/tlborm/).
+
 If you wish to contribute, see [the GitHub repository](https://github.com/DanielKeep/tlborm/).
 
 ## Wanted
