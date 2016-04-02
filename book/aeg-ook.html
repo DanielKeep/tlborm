@@ -6,7 +6,7 @@
     <meta name="generator" content="rustdoc">
     <title>Ook!</title>
 
-    <link rel="stylesheet" type="text/css" href="rust-book.css">
+    <link rel="stylesheet" type="text/css" href="rustbook.css">
 
     
 </head>
@@ -18,14 +18,15 @@
     </div>
     <![endif]-->
 
-    <div id="nav">
-                <button id="toggle-nav">
-                  <span class="sr-only">Toggle navigation</span>
-                  <span class="bar"></span>
-                  <span class="bar"></span>
-                  <span class="bar"></span>
-                </button>
-              </div>
+    
+                <div id="nav">
+                    <button id="toggle-nav">
+                        <span class="sr-only">Toggle navigation</span>
+                        <span class="bar"></span>
+                        <span class="bar"></span>
+                        <span class="bar"></span>
+                    </button>
+                </div>
 <div id='toc' class='mobile-hidden'>
 <ul class='chapter'>
 <li><a  href='README.html'><b>1.</b> Introduction</a>
@@ -128,25 +129,25 @@
 
 <p>Ook! is interesting because it is known to be Turing-complete, meaning that any environment in which you can implement it must <em>also</em> be Turing-complete.</p>
 
-<h2 id='implementation' class='section-header'><a href='#implementation'>Implementation</a></h2><span class='rusttest'>fn main() {
+<h2 id='implementation' class='section-header'><a href='#implementation'>Implementation</a></h2>
+<span class='rusttest'>fn main() {
     #![recursion_limit = &quot;158&quot;]
-    
 }</span><pre class='rust rust-example-rendered'>
 <span class='attribute'>#<span class='op'>!</span>[<span class='ident'>recursion_limit</span> <span class='op'>=</span> <span class='string'>&quot;158&quot;</span>]</span></pre>
 
 <p>This is, in fact, the lowest possible recursion limit for which the example program provided at the end will actually compile.  If you&#39;re wondering what could be so fantastically complex that it would <em>justify</em> a recursion limit nearly five times the default limit... <a href="https://en.wikipedia.org/wiki/Hello_world_program">take a wild guess</a>.</p>
+
 <span class='rusttest'>fn main() {
     type CellType = u8;
     const MEM_SIZE: usize = 30_000;
-    
 }</span><pre class='rust rust-example-rendered'>
 <span class='kw'>type</span> <span class='ident'>CellType</span> <span class='op'>=</span> <span class='ident'>u8</span>;
 <span class='kw'>const</span> <span class='ident'>MEM_SIZE</span>: <span class='ident'>usize</span> <span class='op'>=</span> <span class='number'>30_000</span>;</pre>
 
 <p>These are here purely to ensure they are visible to the macro expansion.<sup id="fnref1"><a href="#fn1" rel="footnote">1</a></sup></p>
+
 <span class='rusttest'>fn main() {
     macro_rules! Ook {
-    
 }</span><pre class='rust rust-example-rendered'>
 <span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>Ook</span> {</pre>
 
@@ -162,6 +163,7 @@
 <li>We are expanding into a function largely so that we can use <code>try!</code> to simplify error handling.</li>
 <li>The use of underscore-prefixed names is so that the compiler will not complain about unused functions or variables if, for example, the user writes an Ook! program that does no I/O.</li>
 </ul>
+
 <span class='rusttest'>fn main() {
         (@start $($Ooks:tt)*) =&gt; {
             {
@@ -200,7 +202,6 @@
                 ook()
             }
         };
-    
 }</span><pre class='rust rust-example-rendered'>
     (<span class='kw-2'>@</span><span class='ident'>start</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>Ooks</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>=&gt;</span> {
         {
@@ -246,13 +247,14 @@
 <p>The general form of these rules is <code>(@e $syms; ($input))</code>.  As you can see from the <code>@start</code> rule, <code>$syms</code> is the collection of symbols needed to actually implement the program: input, output, the memory array, <em>etc.</em>.  We are using <a href="../pat/README.html#tt-bundling">TT bundling</a> to simplify forwarding of these symbols through later, intermediate rules.</p>
 
 <p>First, is the rule that terminates our recursion: once we have no more input, we stop.</p>
+
 <span class='rusttest'>fn main() {
         (@e $syms:tt; ()) =&gt; {};
-    
 }</span><pre class='rust rust-example-rendered'>
     (<span class='kw-2'>@</span><span class='ident'>e</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>syms</span>:<span class='ident'>tt</span>; ()) <span class='op'>=&gt;</span> {};</pre>
 
 <p>Next, we have a single rule for <em>almost</em> each opcode.  For these, we strip off the opcode, emit the corresponding Rust code, then recurse on the input tail: a textbook <a href="../pat/README.html#incremental-tt-munchers">TT muncher</a>.</p>
+
 <span class='rusttest'>fn main() {
         // Increment pointer.
         (@e ($a:expr, $i:expr, $inc:expr, $dec:expr, $r:expr, $w:expr, $re:expr);
@@ -307,7 +309,6 @@
             );
             Ook!(@e ($a, $i, $inc, $dec, $r, $w, $re); ($($tail)*));
         };
-    
 }</span><pre class='rust rust-example-rendered'>
     <span class='comment'>// Increment pointer.</span>
     (<span class='kw-2'>@</span><span class='ident'>e</span> (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>a</span>:<span class='ident'>expr</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>:<span class='ident'>expr</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>inc</span>:<span class='ident'>expr</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>dec</span>:<span class='ident'>expr</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>r</span>:<span class='ident'>expr</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>w</span>:<span class='ident'>expr</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>re</span>:<span class='ident'>expr</span>);
@@ -367,11 +368,11 @@
 
 <blockquote>
 <p><strong>Note</strong>: this is <em>not</em> part of the larger code.</p>
+
 <span class='rusttest'>fn main() {
     while memory[ptr] != 0 {
         // Contents of loop
     }
-    
 }</span><pre class='rust rust-example-rendered'>
 <span class='kw'>while</span> <span class='ident'>memory</span>[<span class='ident'>ptr</span>] <span class='op'>!=</span> <span class='number'>0</span> {
     <span class='comment'>// Contents of loop</span>
@@ -381,6 +382,7 @@
 <p>Of course, we cannot <em>actually</em> emit an incomplete loop.  This <em>could</em> be solved by using <a href="../pat/README.html#push-down-accumulation">pushdown</a>, were it not for a more fundamental problem: we cannot <em>write</em> <code>while memory[ptr] != {</code>, at all, <em>anywhere</em>.  This is because doing so would introduce an unbalanced brace.</p>
 
 <p>The solution to this is to actually split the input into two parts: everything <em>inside</em> the loop, and everything <em>after</em> it.  The <code>@x</code> rules handle the first, <code>@s</code> the latter.</p>
+
 <span class='rusttest'>fn main() {
         (@e ($a:expr, $i:expr, $inc:expr, $dec:expr, $r:expr, $w:expr, $re:expr);
             (Ook! Ook? $($tail:tt)*))
@@ -390,7 +392,6 @@
             }
             Ook!(@s ($a, $i, $inc, $dec, $r, $w, $re); (); ($($tail)*));
         };
-    
 }</span><pre class='rust rust-example-rendered'>
     (<span class='kw-2'>@</span><span class='ident'>e</span> (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>a</span>:<span class='ident'>expr</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>:<span class='ident'>expr</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>inc</span>:<span class='ident'>expr</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>dec</span>:<span class='ident'>expr</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>r</span>:<span class='ident'>expr</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>w</span>:<span class='ident'>expr</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>re</span>:<span class='ident'>expr</span>);
         (<span class='macro'>Ook</span><span class='macro'>!</span> <span class='ident'>Ook</span>? $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>:<span class='ident'>tt</span>)<span class='op'>*</span>))
@@ -421,6 +422,7 @@
 <p>First is a rule to detect when we find the matching <code>Ook? Ook!</code> sequence that closes the loop we&#39;re parsing.  In this case, we feed the accumulated loop contents to the previously defined <code>@e</code> rules.</p>
 
 <p>Note that we <em>do not</em> need to do anything with the remaining input tail (that will be handled by the <code>@s</code> rules).</p>
+
 <span class='rusttest'>fn main() {
         (@x $syms:tt; (); ($($buf:tt)*);
             (Ook? Ook! $($tail:tt)*))
@@ -428,7 +430,6 @@
             // Outer-most loop is closed.  Process the buffered tokens.
             Ook!(@e $syms; ($($buf)*));
         };
-    
 }</span><pre class='rust rust-example-rendered'>
     (<span class='kw-2'>@</span><span class='ident'>x</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>syms</span>:<span class='ident'>tt</span>; (); ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>buf</span>:<span class='ident'>tt</span>)<span class='op'>*</span>);
         (<span class='ident'>Ook</span>? <span class='macro'>Ook</span><span class='macro'>!</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>:<span class='ident'>tt</span>)<span class='op'>*</span>))
@@ -438,6 +439,7 @@
     };</pre>
 
 <p>Next, we have rules for entering and exiting nested loops.  These adjust the counter and add the opcodes to the buffer.</p>
+
 <span class='rusttest'>fn main() {
         (@x $syms:tt; ($($depth:tt)*); ($($buf:tt)*);
             (Ook! Ook? $($tail:tt)*))
@@ -452,7 +454,6 @@
             // One level higher.
             Ook!(@x $syms; ($($depth)*); ($($buf)* Ook? Ook!); ($($tail)*));
         };
-    
 }</span><pre class='rust rust-example-rendered'>
     (<span class='kw-2'>@</span><span class='ident'>x</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>syms</span>:<span class='ident'>tt</span>; ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>depth</span>:<span class='ident'>tt</span>)<span class='op'>*</span>); ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>buf</span>:<span class='ident'>tt</span>)<span class='op'>*</span>);
         (<span class='macro'>Ook</span><span class='macro'>!</span> <span class='ident'>Ook</span>? $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>:<span class='ident'>tt</span>)<span class='op'>*</span>))
@@ -471,13 +472,13 @@
 <p>Finally, we have a rule for &quot;everything else&quot;.  Note the <code>$op0</code> and <code>$op1</code> captures: as far as Rust is concerned, our Ook! tokens are always <em>two</em> Rust tokens: the identifier <code>Ook</code>, and another token.  Thus, we can generalise over all non-loop opcodes by matching <code>!</code>, <code>?</code>, and <code>.</code> as <code>tt</code>s.</p>
 
 <p>Here, we leave <code>$depth</code> untouched and just add the opcodes to the buffer.</p>
+
 <span class='rusttest'>fn main() {
         (@x $syms:tt; $depth:tt; ($($buf:tt)*);
             (Ook $op0:tt Ook $op1:tt $($tail:tt)*))
         =&gt; {
             Ook!(@x $syms; $depth; ($($buf)* Ook $op0 Ook $op1); ($($tail)*));
         };
-    
 }</span><pre class='rust rust-example-rendered'>
     (<span class='kw-2'>@</span><span class='ident'>x</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>syms</span>:<span class='ident'>tt</span>; <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>depth</span>:<span class='ident'>tt</span>; ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>buf</span>:<span class='ident'>tt</span>)<span class='op'>*</span>);
         (<span class='ident'>Ook</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>op0</span>:<span class='ident'>tt</span> <span class='ident'>Ook</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>op1</span>:<span class='ident'>tt</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>:<span class='ident'>tt</span>)<span class='op'>*</span>))
@@ -489,6 +490,7 @@
 <p>This is <em>broadly</em> the same as loop extraction, except we don&#39;t care about the <em>contents</em> of the loop (and as such, don&#39;t need the accumulation buffer).  All we need to know is when we are <em>past</em> the loop.  At that point, we resume processing the input using the <code>@e</code> rules.</p>
 
 <p>As such, these rules are presented without further exposition.</p>
+
 <span class='rusttest'>fn main() {
         // End of loop.
         (@s $syms:tt; ();
@@ -517,7 +519,6 @@
         =&gt; {
             Ook!(@s $syms; ($($depth)*); ($($tail)*));
         };
-    
 }</span><pre class='rust rust-example-rendered'>
     <span class='comment'>// End of loop.</span>
     (<span class='kw-2'>@</span><span class='ident'>s</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>syms</span>:<span class='ident'>tt</span>; ();
@@ -553,12 +554,12 @@
 <p>It is worth noting that because this formulation simply matches <em>all</em> tokens provided to it, it is <em>extremely dangerous</em>.  Any mistake can cause an invocation to fail to match all the above rules, thus falling down to this one and triggering an infinite recursion.</p>
 
 <p>When you are writing, modifying, or debugging a macro like this, it is wise to temporarily prefix rules such as this one with something, such as <code>@entry</code>.  This prevents the infinite recursion case, and you are more likely to get matcher errors at the appropriate place.</p>
+
 <span class='rusttest'>fn main() {
         ($($Ooks:tt)*) =&gt; {
             Ook!(@start $($Ooks)*)
         };
     }
-    
 }</span><pre class='rust rust-example-rendered'>
     ($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>Ooks</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>=&gt;</span> {
         <span class='macro'>Ook</span><span class='macro'>!</span>(<span class='kw-2'>@</span><span class='ident'>start</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>Ooks</span>)<span class='op'>*</span>)
@@ -567,6 +568,7 @@
 
 <h3 id='usage' class='section-header'><a href='#usage'>Usage</a></h3>
 <p>Here, finally, is our test program.</p>
+
 <span class='rusttest'>fn main() {
     let _ = Ook!(
         Ook. Ook?  Ook. Ook.  Ook. Ook.  Ook. Ook.
@@ -689,72 +691,10 @@
 </div>
 
     <script type="text/javascript">
-        window.playgroundUrl = "http://play.rust-lang.org";
+        window.playgroundUrl = "https://play.rust-lang.org";
     </script>
-    
-<script type="text/javascript">
-document.addEventListener("DOMContentLoaded", function(event) {
-  document.getElementById("toggle-nav").onclick = toggleNav;
-  function toggleNav() {
-    var toc = document.getElementById("toc");
-    var pagewrapper = document.getElementById("page-wrapper");
-    toggleClass(toc, "mobile-hidden");
-    toggleClass(pagewrapper, "mobile-hidden");
-  };
-
-  function toggleClass(el, className) {
-     // from http://youmightnotneedjquery.com/
-     if (el.classList) {
-       el.classList.toggle(className);
-     } else {
-       var classes = el.className.split(' ');
-       var existingIndex = classes.indexOf(className);
-
-       if (existingIndex >= 0) {
-         classes.splice(existingIndex, 1);
-       } else {
-         classes.push(className);
-       }
-
-       el.className = classes.join(' ');
-     }
-  }
-
-  // The below code is used to add prev and next navigation links to the bottom
-  // of each of the sections.
-  // It works by extracting the current page based on the url and iterates over
-  // the menu links until it finds the menu item for the current page. We then
-  // create a copy of the preceding and following menu links and add the
-  // correct css class and insert them into the bottom of the page.
-  var toc = document.getElementById('toc').getElementsByTagName('a');
-  var href = document.location.pathname.split('/').pop();
-  if (href === 'index.html' || href === '') {
-    href = 'README.html';
-  }
-
-  for (var i = 0; i < toc.length; i++) {
-    if (toc[i].attributes['href'].value.split('/').pop() === href) {
-      var nav = document.createElement('p');
-      if (i > 0) {
-        var prevNode = toc[i-1].cloneNode(true);
-        prevNode.className = 'left';
-        prevNode.setAttribute('rel', 'prev');
-        nav.appendChild(prevNode);
-      }
-      if (i < toc.length - 1) {
-        var nextNode = toc[i+1].cloneNode(true);
-        nextNode.className = 'right';
-        nextNode.setAttribute('rel', 'next');
-        nav.appendChild(nextNode);
-      }
-      document.getElementById('page').appendChild(nav);
-      break;
-    }
-  }
-
-});
-</script>
-<script type="text/javascript" src="playpen.js"></script>
+    <script src='rustbook.js'></script>
+<script src='playpen.js'></script>
 </div></div>
 
 

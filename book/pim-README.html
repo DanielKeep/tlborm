@@ -6,7 +6,7 @@
     <meta name="generator" content="rustdoc">
     <title>Macros, A Practical Introduction</title>
 
-    <link rel="stylesheet" type="text/css" href="rust-book.css">
+    <link rel="stylesheet" type="text/css" href="rustbook.css">
 
     
 </head>
@@ -18,14 +18,15 @@
     </div>
     <![endif]-->
 
-    <div id="nav">
-                <button id="toggle-nav">
-                  <span class="sr-only">Toggle navigation</span>
-                  <span class="bar"></span>
-                  <span class="bar"></span>
-                  <span class="bar"></span>
-                </button>
-              </div>
+    
+                <div id="nav">
+                    <button id="toggle-nav">
+                        <span class="sr-only">Toggle navigation</span>
+                        <span class="bar"></span>
+                        <span class="bar"></span>
+                        <span class="bar"></span>
+                    </button>
+                </div>
 <div id='toc' class='mobile-hidden'>
 <ul class='chapter'>
 <li><a  href='README.html'><b>1.</b> Introduction</a>
@@ -184,17 +185,18 @@
 
 <h2 id='construction' class='section-header'><a href='#construction'>Construction</a></h2>
 <p>Usually, when working on a new macro, the first thing I do is decide what the macro invocation should look like.  In this specific case, my first attempt looked like this:</p>
+
 <span class='rusttest'>fn main() {
     let fib = recurrence![a[n] = 0, 1, ..., a[n-1] + a[n-2]];
     
     for e in fib.take(10) { println!(&quot;{}&quot;, e) }
-    
 }</span><pre class='rust rust-example-rendered'>
 <span class='kw'>let</span> <span class='ident'>fib</span> <span class='op'>=</span> <span class='macro'>recurrence</span><span class='macro'>!</span>[<span class='ident'>a</span>[<span class='ident'>n</span>] <span class='op'>=</span> <span class='number'>0</span>, <span class='number'>1</span>, ..., <span class='ident'>a</span>[<span class='ident'>n</span><span class='op'>-</span><span class='number'>1</span>] <span class='op'>+</span> <span class='ident'>a</span>[<span class='ident'>n</span><span class='op'>-</span><span class='number'>2</span>]];
 
 <span class='kw'>for</span> <span class='ident'>e</span> <span class='kw'>in</span> <span class='ident'>fib</span>.<span class='ident'>take</span>(<span class='number'>10</span>) { <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;{}&quot;</span>, <span class='ident'>e</span>) }</pre>
 
 <p>From that, we can take a stab at how the macro should be defined, even if we aren&#39;t sure of the actual expansion.  This is useful because if you can&#39;t figure out how to parse the input syntax, then <em>maybe</em> you need to change it.</p>
+
 <span class='rusttest'>macro_rules! recurrence {
     ( a[n] = $($inits:expr),+ , ... , $recur:expr ) =&gt; { /* ... */ };
 }
@@ -393,13 +395,13 @@ fn main() {}
 <p>The key take-away from this is that the macro system will <em>try</em> to incrementally match the tokens provided as input to the macro against the provided rules.  We&#39;ll come back to the &quot;try&quot; part.</p>
 
 <p>Now, let&#39;s begin writing the final, fully expanded form.  For this expansion, I was looking for something like:</p>
+
 <span class='rusttest'>fn main() {
     let fib = {
         struct Recurrence {
             mem: [u64; 2],
             pos: usize,
         }
-    
 }</span><pre class='rust rust-example-rendered'>
 <span class='kw'>let</span> <span class='ident'>fib</span> <span class='op'>=</span> {
     <span class='kw'>struct</span> <span class='ident'>Recurrence</span> {
@@ -412,6 +414,7 @@ fn main() {}
 <blockquote>
 <p><strong>Aside</strong>: I&#39;ve chosen <code>u64</code> as a &quot;sufficiently large&quot; type for the elements of this sequence.  Don&#39;t worry about how this will work out for <em>other</em> sequences; we&#39;ll come to it.</p>
 </blockquote>
+
 <span class='rusttest'>fn main() {
         impl Iterator for Recurrence {
             type Item = u64;
@@ -422,7 +425,6 @@ fn main() {}
                     let next_val = self.mem[self.pos];
                     self.pos += 1;
                     Some(next_val)
-    
 }</span><pre class='rust rust-example-rendered'>
     <span class='kw'>impl</span> <span class='ident'>Iterator</span> <span class='kw'>for</span> <span class='ident'>Recurrence</span> {
         <span class='kw'>type</span> <span class='ident'>Item</span> <span class='op'>=</span> <span class='ident'>u64</span>;
@@ -435,6 +437,7 @@ fn main() {}
                 <span class='prelude-val'>Some</span>(<span class='ident'>next_val</span>)</pre>
 
 <p>We need a branch to yield the initial values of the sequence; nothing tricky.</p>
+
 <span class='rusttest'>fn main() {
                 } else {
                     let a = /* something */;
@@ -448,7 +451,6 @@ fn main() {}
                 }
             }
         }
-    
 }</span><pre class='rust rust-example-rendered'>
             } <span class='kw'>else</span> {
                 <span class='kw'>let</span> <span class='ident'>a</span> <span class='op'>=</span> <span class='comment'>/* something */</span>;
@@ -464,13 +466,12 @@ fn main() {}
     }</pre>
 
 <p>This is a bit harder; we&#39;ll come back and look at <em>how</em> exactly to define <code>a</code>.  Also, <code>TODO_shuffle_down_and_append</code> is another placeholder; I want something that places <code>next_val</code> on the end of the array, shuffling the rest down by one space, dropping the 0th element.</p>
-<span class='rusttest'>
-fn main() {
+
+<span class='rusttest'>fn main() {
         Recurrence { mem: [0, 1], pos: 0 }
     };
     
     for e in fib.take(10) { println!(&quot;{}&quot;, e) }
-    
 }</span><pre class='rust rust-example-rendered'>
 
     <span class='ident'>Recurrence</span> { <span class='ident'>mem</span>: [<span class='number'>0</span>, <span class='number'>1</span>], <span class='ident'>pos</span>: <span class='number'>0</span> }
@@ -479,6 +480,7 @@ fn main() {
 <span class='kw'>for</span> <span class='ident'>e</span> <span class='kw'>in</span> <span class='ident'>fib</span>.<span class='ident'>take</span>(<span class='number'>10</span>) { <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;{}&quot;</span>, <span class='ident'>e</span>) }</pre>
 
 <p>Lastly, return an instance of our new structure, which can then be iterated over.  To summarise, the complete expansion is:</p>
+
 <span class='rusttest'>fn main() {
     let fib = {
         struct Recurrence {
@@ -512,7 +514,6 @@ fn main() {
     };
     
     for e in fib.take(10) { println!(&quot;{}&quot;, e) }
-    
 }</span><pre class='rust rust-example-rendered'>
 <span class='kw'>let</span> <span class='ident'>fib</span> <span class='op'>=</span> {
     <span class='kw'>struct</span> <span class='ident'>Recurrence</span> {
@@ -552,6 +553,7 @@ fn main() {
 </blockquote>
 
 <p>It&#39;s also useful to check your expansion as you&#39;re writing it.  If you see anything in the expansion that needs to vary with the invocation, but <em>isn&#39;t</em> in the actual macro syntax, you should work out where to introduce it.  In this case, we&#39;ve added <code>u64</code>, but that&#39;s not neccesarily what the user wants, nor is it in the macro syntax.  So let&#39;s fix that.</p>
+
 <span class='rusttest'>macro_rules! recurrence {
     ( a[n]: $sty:ty = $($inits:expr),+ , ... , $recur:expr ) =&gt; { /* ... */ };
 }
@@ -587,6 +589,7 @@ for e in fib.take(10) { println!(&quot;{}&quot;, e) }
 <p>I will skim a bit over this part, since it&#39;s effectively tangential to the macro stuff.  We want to make it so that the user can access previous values in the sequence by indexing <code>a</code>; we want it to act as a sliding window keeping the last few (in this case, 2) elements of the sequence.</p>
 
 <p>We can do this pretty easily with a wrapper type:</p>
+
 <span class='rusttest'>fn main() {
     struct IndexOffset&lt;&#39;a&gt; {
         slice: &amp;&#39;a [u64; 2],
@@ -608,7 +611,6 @@ for e in fib.take(10) { println!(&quot;{}&quot;, e) }
             &amp;self.slice[real_index.0]
         }
     }
-    
 }</span><pre class='rust rust-example-rendered'>
 <span class='kw'>struct</span> <span class='ident'>IndexOffset</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
     <span class='ident'>slice</span>: <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;a</span> [<span class='ident'>u64</span>; <span class='number'>2</span>],
@@ -638,13 +640,14 @@ for e in fib.take(10) { println!(&quot;{}&quot;, e) }
 </blockquote>
 
 <p>This changes the definition of <code>a</code> to:</p>
+
 <span class='rusttest'>fn main() {
     let a = IndexOffset { slice: &amp;self.mem, offset: n };
-    
 }</span><pre class='rust rust-example-rendered'>
 <span class='kw'>let</span> <span class='ident'>a</span> <span class='op'>=</span> <span class='ident'>IndexOffset</span> { <span class='ident'>slice</span>: <span class='kw-2'>&amp;</span><span class='self'>self</span>.<span class='ident'>mem</span>, <span class='ident'>offset</span>: <span class='ident'>n</span> };</pre>
 
 <p>The only remaining question is what to do about <code>TODO_shuffle_down_and_append</code>.  I wasn&#39;t able to find a method in the standard library with exactly the semantics I wanted, but it isn&#39;t hard to do by hand.</p>
+
 <span class='rusttest'>fn main() {
     {
         use std::mem::swap;
@@ -654,7 +657,6 @@ for e in fib.take(10) { println!(&quot;{}&quot;, e) }
             swap(&amp;mut swap_tmp, &amp;mut self.mem[i]);
         }
     }
-    
 }</span><pre class='rust rust-example-rendered'>
 {
     <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>mem</span>::<span class='ident'>swap</span>;
@@ -672,6 +674,7 @@ for e in fib.take(10) { println!(&quot;{}&quot;, e) }
 </blockquote>
 
 <p>The working code thus far now looks like this:</p>
+
 <span class='rusttest'>macro_rules! recurrence {
     ( a[n]: $sty:ty = $($inits:expr),+ , ... , $recur:expr ) =&gt; { /* ... */ };
 }
@@ -842,6 +845,7 @@ fn main() {
 </code></pre>
 
 <p>Success!  Now, let&#39;s copy &amp; paste this into the macro expansion, and replace the expanded code with an invocation.  This gives us:</p>
+
 <span class='rusttest'>macro_rules! recurrence {
     ( a[n]: $sty:ty = $($inits:expr),+ , ... , $recur:expr ) =&gt; {
         {
@@ -1020,6 +1024,7 @@ recurrence.rs:69     let fib = recurrence![a[n]: u64 = 0, 1, ..., a[n-1] + a[n-2
 </blockquote>
 
 <p>Thankfully, the fix is relatively simple: we remove the comma from the syntax.  To keep things balanced, we&#39;ll remove <em>both</em> commas around <code>...</code>:</p>
+
 <span class='rusttest'>macro_rules! recurrence {
     ( a[n]: $sty:ty = $($inits:expr),+ ... $recur:expr ) =&gt; {
 //                                     ^~~ changed
@@ -1054,6 +1059,7 @@ fn main() {
 
 <h3 id='substitution' class='section-header'><a href='#substitution'>Substitution</a></h3>
 <p>Substituting something you&#39;ve captured in a macro is quite simple; you can insert the contents of a capture <code>$sty:ty</code> by using <code>$sty</code>.  So, let&#39;s go through and fix the <code>u64</code>s:</p>
+
 <span class='rusttest'>macro_rules! recurrence {
     ( a[n]: $sty:ty = $($inits:expr),+ ... $recur:expr ) =&gt; {
         {
@@ -1192,10 +1198,10 @@ fn main() {
 }</pre>
 
 <p>Let&#39;s tackle a harder one: how to turn <code>inits</code> into both the array literal <code>[0, 1]</code> <em>and</em> the array type, <code>[$sty; 2]</code>.  The first one we can do like so:</p>
+
 <span class='rusttest'>fn main() {
                 Recurrence { mem: [$($inits),+], pos: 0 }
     //                             ^~~~~~~~~~~ changed
-    
 }</span><pre class='rust rust-example-rendered'>
             <span class='ident'>Recurrence</span> { <span class='ident'>mem</span>: [$(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>inits</span>),<span class='op'>+</span>], <span class='ident'>pos</span>: <span class='number'>0</span> }
 <span class='comment'>//                             ^~~~~~~~~~~ changed</span></pre>
@@ -1203,6 +1209,7 @@ fn main() {
 <p>This effectively does the opposite of the capture: repeat <code>inits</code> one or more times, separating each with a comma.  This expands to the expected sequence of tokens: <code>0, 1</code>.</p>
 
 <p>Somehow turning <code>inits</code> into a literal <code>2</code> is a little trickier.  It turns out that there&#39;s no direct way to do this, but we <em>can</em> do it by using a second macro.  Let&#39;s take this one step at a time.</p>
+
 <span class='rusttest'>macro_rules! count_exprs {
     /* ??? */
     () =&gt; {}
@@ -1214,6 +1221,7 @@ fn main() {}
 }</pre>
 
 <p>The obvious case is: given zero expressions, you would expect <code>count_exprs</code> to expand to a literal <code>0</code>.</p>
+
 <span class='rusttest'>macro_rules! count_exprs {
     () =&gt; (0);
 //  ^~~~~~~~~~ added
@@ -1235,6 +1243,7 @@ fn main() {
 </blockquote>
 
 <p>What if you have <em>one</em> expression?  That should be a literal <code>1</code>.</p>
+
 <span class='rusttest'>macro_rules! count_exprs {
     () =&gt; (0);
     ($e:expr) =&gt; (1);
@@ -1254,6 +1263,7 @@ fn main() {
 }</pre>
 
 <p>Two?</p>
+
 <span class='rusttest'>macro_rules! count_exprs {
     () =&gt; (0);
     ($e:expr) =&gt; (1);
@@ -1277,6 +1287,7 @@ fn main() {
 }</pre>
 
 <p>We can &quot;simplify&quot; this a little by re-expressing the case of two expressions recursively.</p>
+
 <span class='rusttest'>macro_rules! count_exprs {
     () =&gt; (0);
     ($e:expr) =&gt; (1);
@@ -1300,6 +1311,7 @@ fn main() {
 }</pre>
 
 <p>This is fine since Rust can fold <code>1 + 1</code> into a constant value.  What if we have three expressions?</p>
+
 <span class='rusttest'>macro_rules! count_exprs {
     () =&gt; (0);
     ($e:expr) =&gt; (1);
@@ -1331,6 +1343,7 @@ fn main() {
 </blockquote>
 
 <p>Hopefully, you can see the pattern here.  We can always reduce the list of expressions by matching one expression, followed by zero or more expressions, expanding that into 1 + a count.</p>
+
 <span class='rusttest'>macro_rules! count_exprs {
     () =&gt; (0);
     ($head:expr) =&gt; (1);
@@ -1360,6 +1373,7 @@ fn main() {
 </blockquote>
 
 <p>With this, we can now modify <code>recurrence</code> to determine the necessary size of <code>mem</code>.</p>
+
 <span class='rusttest'>// added:
 macro_rules! count_exprs {
     () =&gt; (0);
@@ -1533,6 +1547,7 @@ fn main() {
 <span class='comment'>/* ... */</span></pre>
 
 <p>With that done, we can now substitute the last thing: the <code>recur</code> expression.</p>
+
 <span class='rusttest'>macro_rules! count_exprs {
     () =&gt; (0);
     ($head:expr $(, $tail:expr)*) =&gt; (1 + count_exprs!($($tail),*));
@@ -1650,6 +1665,7 @@ recurrence.rs:77:15: 77:64 note: expansion site
 </code></pre>
 
 <p>The <code>--pretty expanded</code> argument tells <code>rustc</code> to perform macro expansion, then turn the resulting AST back into source code.  Because this option isn&#39;t considered stable yet, we also need <code>-Z unstable-options</code>.  The output (after cleaning up some formatting) is shown below; in particular, note the place in the code where <code>$recur</code> was substituted:</p>
+
 <span class='rusttest'>#![feature(no_std)]
 #![no_std]
 #[prelude_import]
@@ -1844,6 +1860,7 @@ fn main() {
 
 <h3 id='being-hygienic' class='section-header'><a href='#being-hygienic'>Being Hygienic</a></h3>
 <p>The issue here is that identifiers in Rust macros are <em>hygienic</em>.  That is, identifiers from two different contexts <em>cannot</em> collide.  To show the difference, let&#39;s take a simpler example.</p>
+
 <span class='rusttest'>/*
 macro_rules! using_a {
     ($e:expr) =&gt; {
@@ -1890,6 +1907,7 @@ fn main() {}
 <pre class="rust rust-example-rendered"><span class="synctx-0"><span class="kw">let</span> <span class="ident">four</span> <span class="op">=</span> </span><span class="synctx-1">{&#xa;    <span class="kw">let</span> </span><span class="synctx-0"><span class="ident">a</span></span><span class="synctx-1"> <span class="op">=</span> <span class="number">42</span>;&#xa;    </span><span class="synctx-0"><span class="ident">a</span> <span class="op">/</span> <span class="number">10</span></span><span class="synctx-1">&#xa;}</span><span class="synctx-0">;</span></pre>
 
 <p>Now, the contexts match, and the code will compile.  We can make this adjustment to our <code>recurrence!</code> macro by explicitly capturing <code>a</code> and <code>n</code>.  After making the necessary changes, we have:</p>
+
 <span class='rusttest'>macro_rules! count_exprs {
     () =&gt; (0);
     ($head:expr) =&gt; (1);
@@ -2059,6 +2077,7 @@ fn main() {
 }</pre>
 
 <p>And it compiles!  Now, let&#39;s try with a different sequence.</p>
+
 <span class='rusttest'>macro_rules! count_exprs {
     () =&gt; (0);
     ($head:expr) =&gt; (1);
@@ -2161,72 +2180,10 @@ for e in recurrence!(f[i]: f64 = 1.0 ... f[i-1] * i as f64).take(10) {
 <p>Success!</p>
 
     <script type="text/javascript">
-        window.playgroundUrl = "http://play.rust-lang.org";
+        window.playgroundUrl = "https://play.rust-lang.org";
     </script>
-    
-<script type="text/javascript">
-document.addEventListener("DOMContentLoaded", function(event) {
-  document.getElementById("toggle-nav").onclick = toggleNav;
-  function toggleNav() {
-    var toc = document.getElementById("toc");
-    var pagewrapper = document.getElementById("page-wrapper");
-    toggleClass(toc, "mobile-hidden");
-    toggleClass(pagewrapper, "mobile-hidden");
-  };
-
-  function toggleClass(el, className) {
-     // from http://youmightnotneedjquery.com/
-     if (el.classList) {
-       el.classList.toggle(className);
-     } else {
-       var classes = el.className.split(' ');
-       var existingIndex = classes.indexOf(className);
-
-       if (existingIndex >= 0) {
-         classes.splice(existingIndex, 1);
-       } else {
-         classes.push(className);
-       }
-
-       el.className = classes.join(' ');
-     }
-  }
-
-  // The below code is used to add prev and next navigation links to the bottom
-  // of each of the sections.
-  // It works by extracting the current page based on the url and iterates over
-  // the menu links until it finds the menu item for the current page. We then
-  // create a copy of the preceding and following menu links and add the
-  // correct css class and insert them into the bottom of the page.
-  var toc = document.getElementById('toc').getElementsByTagName('a');
-  var href = document.location.pathname.split('/').pop();
-  if (href === 'index.html' || href === '') {
-    href = 'README.html';
-  }
-
-  for (var i = 0; i < toc.length; i++) {
-    if (toc[i].attributes['href'].value.split('/').pop() === href) {
-      var nav = document.createElement('p');
-      if (i > 0) {
-        var prevNode = toc[i-1].cloneNode(true);
-        prevNode.className = 'left';
-        prevNode.setAttribute('rel', 'prev');
-        nav.appendChild(prevNode);
-      }
-      if (i < toc.length - 1) {
-        var nextNode = toc[i+1].cloneNode(true);
-        nextNode.className = 'right';
-        nextNode.setAttribute('rel', 'next');
-        nav.appendChild(nextNode);
-      }
-      document.getElementById('page').appendChild(nav);
-      break;
-    }
-  }
-
-});
-</script>
-<script type="text/javascript" src="playpen.js"></script>
+    <script src='rustbook.js'></script>
+<script src='playpen.js'></script>
 </div></div>
 
 

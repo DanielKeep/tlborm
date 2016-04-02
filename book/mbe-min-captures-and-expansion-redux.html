@@ -6,7 +6,7 @@
     <meta name="generator" content="rustdoc">
     <title>Captures and Expansion Redux</title>
 
-    <link rel="stylesheet" type="text/css" href="rust-book.css">
+    <link rel="stylesheet" type="text/css" href="rustbook.css">
 
     
 </head>
@@ -18,14 +18,15 @@
     </div>
     <![endif]-->
 
-    <div id="nav">
-                <button id="toggle-nav">
-                  <span class="sr-only">Toggle navigation</span>
-                  <span class="bar"></span>
-                  <span class="bar"></span>
-                  <span class="bar"></span>
-                </button>
-              </div>
+    
+                <div id="nav">
+                    <button id="toggle-nav">
+                        <span class="sr-only">Toggle navigation</span>
+                        <span class="bar"></span>
+                        <span class="bar"></span>
+                        <span class="bar"></span>
+                    </button>
+                </div>
 <div id='toc' class='mobile-hidden'>
 <ul class='chapter'>
 <li><a  href='README.html'><b>1.</b> Introduction</a>
@@ -110,12 +111,12 @@
 
     <h1 class="title">Captures and Expansion Redux</h1>
     <p>Once the parser begins consuming tokens for a capture, <em>it cannot stop or backtrack</em>.  This means that the second rule of the following macro <em>cannot ever match</em>, no matter what input is provided:</p>
+
 <span class='rusttest'>fn main() {
     macro_rules! dead_rule {
         ($e:expr) =&gt; { ... };
         ($i:ident +) =&gt; { ... };
     }
-    
 }</span><pre class='rust rust-example-rendered'>
 <span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>dead_rule</span> {
     (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> { ... };
@@ -146,6 +147,7 @@
 <p>Additionally, <code>macro_rules!</code> generally forbids a repetition to be followed by another repetition, even if the contents do not conflict.</p>
 
 <p>One aspect of substitution that often surprises people is that substitution is <em>not</em> token-based, despite very much <em>looking</em> like it.  Here is a simple demonstration:</p>
+
 <span class='rusttest'>macro_rules! capture_expr_then_stringify {
     ($e:expr) =&gt; {
         stringify!($e)
@@ -211,6 +213,7 @@ fn main() {
 <p>As you can see, there is exactly <em>one</em> token tree, which contains the AST which was parsed from the input to the <code>capture_expr_then_stringify!</code> invocation.  Hence, what you see in the output is not the stringified tokens, it&#39;s the stringified <em>AST node</em>.</p>
 
 <p>This has further implications.  Consider the following:</p>
+
 <span class='rusttest'>macro_rules! capture_then_match_tokens {
     ($e:expr) =&gt; {match_tokens!($e)};
 }
@@ -267,6 +270,7 @@ got something else
 <p>By parsing the input into an AST node, the substituted result becomes <em>un-destructible</em>; <em>i.e.</em> you cannot examine the contents or match against it ever again.</p>
 
 <p>Here is <em>another</em> example which can be particularly confusing:</p>
+
 <span class='rusttest'>macro_rules! capture_then_what_is {
     (#[$m:meta]) =&gt; {what_is!(#[$m])};
 }
@@ -318,72 +322,10 @@ something else (# [ inline ])
 <p>The only way to avoid this is to capture using the <code>tt</code> or <code>ident</code> kinds.  Once you capture with anything else, the only thing you can do with the result from then on is substitute it directly into the output.</p>
 
     <script type="text/javascript">
-        window.playgroundUrl = "http://play.rust-lang.org";
+        window.playgroundUrl = "https://play.rust-lang.org";
     </script>
-    
-<script type="text/javascript">
-document.addEventListener("DOMContentLoaded", function(event) {
-  document.getElementById("toggle-nav").onclick = toggleNav;
-  function toggleNav() {
-    var toc = document.getElementById("toc");
-    var pagewrapper = document.getElementById("page-wrapper");
-    toggleClass(toc, "mobile-hidden");
-    toggleClass(pagewrapper, "mobile-hidden");
-  };
-
-  function toggleClass(el, className) {
-     // from http://youmightnotneedjquery.com/
-     if (el.classList) {
-       el.classList.toggle(className);
-     } else {
-       var classes = el.className.split(' ');
-       var existingIndex = classes.indexOf(className);
-
-       if (existingIndex >= 0) {
-         classes.splice(existingIndex, 1);
-       } else {
-         classes.push(className);
-       }
-
-       el.className = classes.join(' ');
-     }
-  }
-
-  // The below code is used to add prev and next navigation links to the bottom
-  // of each of the sections.
-  // It works by extracting the current page based on the url and iterates over
-  // the menu links until it finds the menu item for the current page. We then
-  // create a copy of the preceding and following menu links and add the
-  // correct css class and insert them into the bottom of the page.
-  var toc = document.getElementById('toc').getElementsByTagName('a');
-  var href = document.location.pathname.split('/').pop();
-  if (href === 'index.html' || href === '') {
-    href = 'README.html';
-  }
-
-  for (var i = 0; i < toc.length; i++) {
-    if (toc[i].attributes['href'].value.split('/').pop() === href) {
-      var nav = document.createElement('p');
-      if (i > 0) {
-        var prevNode = toc[i-1].cloneNode(true);
-        prevNode.className = 'left';
-        prevNode.setAttribute('rel', 'prev');
-        nav.appendChild(prevNode);
-      }
-      if (i < toc.length - 1) {
-        var nextNode = toc[i+1].cloneNode(true);
-        nextNode.className = 'right';
-        nextNode.setAttribute('rel', 'next');
-        nav.appendChild(nextNode);
-      }
-      document.getElementById('page').appendChild(nav);
-      break;
-    }
-  }
-
-});
-</script>
-<script type="text/javascript" src="playpen.js"></script>
+    <script src='rustbook.js'></script>
+<script src='playpen.js'></script>
 </div></div>
 
 

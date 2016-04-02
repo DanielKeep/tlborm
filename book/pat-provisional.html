@@ -6,7 +6,7 @@
     <meta name="generator" content="rustdoc">
     <title>Provisional</title>
 
-    <link rel="stylesheet" type="text/css" href="rust-book.css">
+    <link rel="stylesheet" type="text/css" href="rustbook.css">
 
     
 </head>
@@ -18,14 +18,15 @@
     </div>
     <![endif]-->
 
-    <div id="nav">
-                <button id="toggle-nav">
-                  <span class="sr-only">Toggle navigation</span>
-                  <span class="bar"></span>
-                  <span class="bar"></span>
-                  <span class="bar"></span>
-                </button>
-              </div>
+    
+                <div id="nav">
+                    <button id="toggle-nav">
+                        <span class="sr-only">Toggle navigation</span>
+                        <span class="bar"></span>
+                        <span class="bar"></span>
+                        <span class="bar"></span>
+                    </button>
+                </div>
 <div id='toc' class='mobile-hidden'>
 <ul class='chapter'>
 <li><a  href='README.html'><b>1.</b> Introduction</a>
@@ -117,6 +118,7 @@
 
 <p><strong>Note</strong>: this section assumes understanding of <a href="#push-down-accumulation">push-down accumulation</a> and <a href="#incremental-tt-munchers">incremental TT munchers</a>.</p>
 </blockquote>
+
 <span class='rusttest'>macro_rules! abacus {
     ((- $($moves:tt)*) -&gt; (+ $($count:tt)*)) =&gt; {
         abacus!(($($moves)*) -&gt; ($($count)*))
@@ -216,6 +218,7 @@ fn main() {
 <p>Note that the example at the top combines some of the rules together (for example, it combines increment on <code>()</code> and <code>($($count:tt)+)</code> into an increment on <code>($($count:tt)*)</code>).</p>
 
 <p>If you want to extract the actual <em>value</em> of the counter, this can be done using a regular <a href="../blk/README.html#counting">counter macro</a>.  For the example above, the terminal rules can be replaced with the following:</p>
+
 <span class='rusttest'>fn main() {
     macro_rules! abacus {
         // ...
@@ -233,7 +236,6 @@ fn main() {
     macro_rules! replace_expr {
         ($_t:tt $sub:expr) =&gt; {$sub};
     }
-    
 }</span><pre class='rust rust-example-rendered'>
 <span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>abacus</span> {
     <span class='comment'>// ...</span>
@@ -254,6 +256,7 @@ fn main() {
 
 <blockquote>
 <p><strong><abbr title="Just for this example">JFTE</abbr></strong>: strictly speaking, the above formulation of <code>abacus!</code> is needlessly complex.  It can be implemented much more efficiently using repetition, provided you <em>do not</em> need to match against the counter&#39;s value in a macro:</p>
+
 <span class='rusttest'>fn main() {
     macro_rules! abacus {
         (-) =&gt; {-1};
@@ -262,7 +265,6 @@ fn main() {
             0 $(+ abacus!($moves))*
         }
     }
-    
 }</span><pre class='rust rust-example-rendered'>
 <span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>abacus</span> {
     (<span class='op'>-</span>) <span class='op'>=&gt;</span> {<span class='op'>-</span><span class='number'>1</span>};
@@ -287,72 +289,10 @@ fn main() {
 </div>
 
     <script type="text/javascript">
-        window.playgroundUrl = "http://play.rust-lang.org";
+        window.playgroundUrl = "https://play.rust-lang.org";
     </script>
-    
-<script type="text/javascript">
-document.addEventListener("DOMContentLoaded", function(event) {
-  document.getElementById("toggle-nav").onclick = toggleNav;
-  function toggleNav() {
-    var toc = document.getElementById("toc");
-    var pagewrapper = document.getElementById("page-wrapper");
-    toggleClass(toc, "mobile-hidden");
-    toggleClass(pagewrapper, "mobile-hidden");
-  };
-
-  function toggleClass(el, className) {
-     // from http://youmightnotneedjquery.com/
-     if (el.classList) {
-       el.classList.toggle(className);
-     } else {
-       var classes = el.className.split(' ');
-       var existingIndex = classes.indexOf(className);
-
-       if (existingIndex >= 0) {
-         classes.splice(existingIndex, 1);
-       } else {
-         classes.push(className);
-       }
-
-       el.className = classes.join(' ');
-     }
-  }
-
-  // The below code is used to add prev and next navigation links to the bottom
-  // of each of the sections.
-  // It works by extracting the current page based on the url and iterates over
-  // the menu links until it finds the menu item for the current page. We then
-  // create a copy of the preceding and following menu links and add the
-  // correct css class and insert them into the bottom of the page.
-  var toc = document.getElementById('toc').getElementsByTagName('a');
-  var href = document.location.pathname.split('/').pop();
-  if (href === 'index.html' || href === '') {
-    href = 'README.html';
-  }
-
-  for (var i = 0; i < toc.length; i++) {
-    if (toc[i].attributes['href'].value.split('/').pop() === href) {
-      var nav = document.createElement('p');
-      if (i > 0) {
-        var prevNode = toc[i-1].cloneNode(true);
-        prevNode.className = 'left';
-        prevNode.setAttribute('rel', 'prev');
-        nav.appendChild(prevNode);
-      }
-      if (i < toc.length - 1) {
-        var nextNode = toc[i+1].cloneNode(true);
-        nextNode.className = 'right';
-        nextNode.setAttribute('rel', 'next');
-        nav.appendChild(nextNode);
-      }
-      document.getElementById('page').appendChild(nav);
-      break;
-    }
-  }
-
-});
-</script>
-<script type="text/javascript" src="playpen.js"></script>
+    <script src='rustbook.js'></script>
+<script src='playpen.js'></script>
 </div></div>
 
 
