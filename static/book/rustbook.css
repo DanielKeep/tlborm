@@ -1,38 +1,48 @@
+/**
+ * Copyright 2013-2015 The Rust Project Developers. See the COPYRIGHT
+ * file at the top-level directory of this distribution and at
+ * http://rust-lang.org/COPYRIGHT.
+ *
+ * Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+ * http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+ * <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+ * option. This file may not be copied, modified, or distributed
+ * except according to those terms.
+ *
+ * Modified by Daniel Keep.
+ */
 
-@import url("../rust.css");
+@import url('../rust.css');
 
 body {
-    max-width:none;
+    max-width: none;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-weight: bold;
 }
 
 @media only screen {
     #toc {
-        position: absolute;
-        left: 0px;
-        top: 0px;
-        bottom: 0px;
-        width: 250px;
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 300px;
         overflow-y: auto;
-        /*border-right: 1px solid rgba(0, 0, 0, 0.07);*/
         border-right: 1px solid rgba(255, 255, 255, 0.07);
-        padding: 10px 10px;
-        font-size: 16px;
-        background: none repeat scroll 0% 0% /*#FFF*/;
+        padding: 0 15px;
+        font-size: 14px;
         background-color: #1d1d1d;
-        box-sizing: border-box;
         -webkit-overflow-scrolling: touch;
     }
 
     #page-wrapper {
         position: absolute;
-        overflow-y: auto;
-        left: 260px;
-        right: 0px;
-        top: 0px;
-        bottom: 0px;
-        box-sizing: border-box;
-        background: none repeat scroll 0% 0% /*#FFF*/;
-        background-color: #1b1b1b;
+        top: 0;
+        left: 300px;
+        right: 0;
+        padding: 0 15px;
         -webkit-overflow-scrolling: touch;
     }
 }
@@ -43,39 +53,38 @@ body {
     }
 }
 
-@media only screen and (max-width: 1060px) {
+@media only screen and (max-width: 1023px) {
     #toc {
         width: 100%;
-        margin-right: 0;
         top: 40px;
     }
+
     #page-wrapper {
         top: 40px;
-        left: 15px;
-        padding-right: 15px;
+        left: 0;
     }
+
     .mobile-hidden {
         display: none;
     }
 }
 
 #page {
-    margin-left: auto;
-    margin-right:auto;
+    margin: 0 auto;
     max-width: 750px;
     padding-bottom: 50px;
 }
 
 .chapter {
-    list-style: none outside none;
-    padding-left: 0px;
+    list-style: none;
+    padding-left: 0;
     line-height: 30px;
 }
 
 .section {
-    list-style: none outside none;
+    list-style: none;
     padding-left: 20px;
-    line-height: 30px;
+    line-height: 40px;
 }
 
 .section li {
@@ -85,28 +94,25 @@ body {
 }
 
 .chapter li a {
-    /*color: #000000;*/
     color: #ddd;
+    padding: 5px 0;
 }
 
-.chapter li a.active {
-    text-decoration: underline;
-    font-weight: bold;
-}
-
-#toggle-nav {
-    height: 20px;
-    width:  30px;
-    padding: 3px 3px 0 3px;
+.chapter li a.active,
+.chapter li a:hover {
+    color: #008cff;
+    text-decoration: none;
 }
 
 #toggle-nav {
+    cursor: pointer;
     margin-top: 5px;
     width: 30px;
     height: 30px;
-    background-color: #FFF;
+    background-color: #fff;
     border: 1px solid #666;
-    border-radius: 3px 3px 3px 3px;
+    border-radius: 3px;
+    padding: 3px 3px 0 3px;
 }
 
 .sr-only {

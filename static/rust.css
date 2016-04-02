@@ -58,13 +58,11 @@
 /* General structure */
 
 body {
-    /*background-color: white;*/
     background-color: #1b1b1b;
     margin: 0 auto;
     padding: 0 15px;
     font-family: "Source Serif Pro", Georgia, Times, "Times New Roman", serif;
     font-size: 18px;
-    /*color: #333;*/
     color: #ddd;
     line-height: 1.428571429;
 
@@ -79,10 +77,9 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6, nav, #versioninfo {
-    font-family: "Fira Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-family: "Open Sans", "Fira Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 h1, h2, h3, h4, h5, h6 {
-    /*color: black;*/
     color: #eee;
     font-weight: 400;
     line-height: 1.1;
@@ -107,7 +104,6 @@ h1 {
     font-size: 28px;
     font-weight: 500;
     padding: .1em .4em;
-    /*border-bottom: 2px solid #ddd;*/
     border-bottom: 2px solid #666;
 }
 h1.title {
@@ -116,13 +112,11 @@ h1.title {
 h2 {
     font-size: 26px;
     padding: .2em .5em;
-    /*border-bottom: 1px solid #ddd;*/
     border-bottom: 1px solid #666;
 }
 h3 {
     font-size: 24px;
     padding: .2em .7em;
-    /*border-bottom: 1px solid #DDE8FC;*/
     border-bottom: 1px solid #666;
 }
 h4 {
@@ -166,7 +160,6 @@ em {
 }
 
 footer {
-    /*border-top: 1px solid #ddd;*/
     border-top: 1px solid #666;
     font-size: 14.3px;
     font-style: italic;
@@ -187,7 +180,6 @@ a:hover, a:focus {
     text-decoration: underline;
 }
 a:focus {
-    /*outline: thin dotted #333;*/
     outline: thin dotted #ddd;
     outline: 5px auto -webkit-focus-ring-color;
     outline-offset: -2px;
@@ -199,7 +191,6 @@ a:hover, a:active {
 h1 a:link, h1 a:visited, h2 a:link, h2 a:visited,
 h3 a:link, h3 a:visited, h4 a:link, h4 a:visited,
 h5 a:link, h5 a:visited {
-    /*color: black;*/
     color: #eee;
 }
 h1 a:hover, h2 a:hover, h3 a:hover, h4 a:hover,
@@ -211,10 +202,12 @@ pre, code {
     font-family: "Source Code Pro", Menlo, Monaco, Consolas, "DejaVu Sans Mono", monospace;
     word-wrap: break-word;
 }
+pre > code.language-text {
+    font-family: "DejaVu Sans Mono", unifont, "Consolas", "Liberation Mono", monospace;
+}
 pre {
     background-color: #222222;
     color: #f8f8f2;
-    /*border-left: 2px solid #eee;*/
     border-left: 2px solid #666;
     white-space: pre-wrap;
     padding: 14px;
@@ -245,15 +238,6 @@ a > code {
 }
 
 /* Code highlighting */
-/*pre.rust .kw { color: #8959A8; }
-pre.rust .kw-2, pre.rust .prelude-ty { color: #4271AE; }
-pre.rust .number, pre.rust .string { color: #718C00; }
-pre.rust .self, pre.rust .boolval, pre.rust .prelude-val,
-pre.rust .attribute, pre.rust .attribute .ident { color: #C82829; }
-pre.rust .comment { color: #8E908C; }
-pre.rust .doccomment { color: #4D4D4C; }
-pre.rust .macro, pre.rust .macro-nonterminal { color: #3E999F; }
-pre.rust .lifetime { color: #B76514; }*/
 pre.rust .kw { color: #f92672; }
 pre.rust .kw-2 { color: #f92672; }
 pre.rust .prelude-ty { color: #66d9ef; }
@@ -303,14 +287,10 @@ code .synctx-1 { background-color: rgba(0, 255, 0, 0.1); }
 }
 
 blockquote {
-    /*color: #000;*/
     color: #ddd;
     margin: 20px 0;
     padding: 15px 20px;
-    /*background-color: #f2f7f9;*/
     background-color: #1d1d1d;
-    /*border-top: .1em solid #e5eef2;
-    border-bottom: .1em solid #e5eef2;*/
     border-top: .1em solid #666;
     border-bottom: .1em solid #666;
 }
@@ -358,7 +338,6 @@ hr {
     margin-top: 20px;
     margin-bottom: 20px;
     border: 0;
-    /*border-top: 1px solid #eeeeee;*/
     border-top: 1px solid #666;
 }
 
@@ -375,7 +354,6 @@ table tr.odd {
 
 table td,
 table th {
-    /*border: 1px solid #ddd;*/
     border: 1px solid #666;
     padding: 5px;
 }
@@ -425,7 +403,6 @@ pre.rust { position: relative; }
         content: "";
     }
     pre, blockquote {
-        /*border: 1px solid #999;*/
         border: 1px solid #666;
         page-break-inside: avoid;
     }
