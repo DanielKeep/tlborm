@@ -92,6 +92,6 @@ let x = 1 + 3;
 
 The takeaway here is that expansion happens in "passes"; as many as is needed to completely expand all invocations.
 
-Well, not *quite*.  In fact, the compiler imposes an upper limit on the number of such recursive passes it is willing to run before giving up.  This is known as the macro recursion limit and defaults to 32.  If the 32nd expansion contains a macro invocation, the compiler will abort with an error indicating that the recursion limit was exceeded.
+Well, not *quite*.  In fact, the compiler imposes an upper limit on the number of such recursive passes it is willing to run before giving up.  This is known as the macro recursion limit and defaults to 64.  If the 64th nested expansion contains yet another macro invocation, the compiler will abort with an error indicating that the recursion limit was exceeded.
 
 This limit can be raised using the `#![recursion_limit="…"]` attribute, though it *must* be done crate-wide.  Generally, it is recommended to try and keep macros below this limit wherever possible.
