@@ -144,3 +144,37 @@ macro_rules! count_idents {
 This method does have two drawbacks.  First, as implied above, it can *only* count valid identifiers (which are also not keywords), and it does not allow those identifiers to repeat.
 
 Secondly, this approach is *not* hygienic, meaning that if whatever identifier you use in place of `__CountIdentsLast` is provided as input, the macro will fail due to the duplicate variants in the `enum`.
+
+## Logarithmic counting
+
+This approach is similar to Recursion, with the difference that every (one or two) recursive calls, the number of tokens to count is *divided by two*, instead of being reduced by one. Therefore, the recursion depth is the binary logarithm of the number of tokens to count and the expanded tree is likewise very small.
+
+```rust
+macro_rules! count_tts {
+    ()        => {0usize};
+    ($one:tt) => {1usize};
+    ($($pairs:tt $_p:tt)*) => {
+        count_tts!($($pairs)*) << 1usize
+    };
+    ($odd:tt $($rest:tt)*) => {
+        count_tts!($($rest)*) | 1usize
+    };
+}
+```
+
+Here is the expansion for 51 tokens:
+
+```rust
+count_tts!(---------------------------------------------------)
+count_tts!(--------------------------------------------------) | 1
+count_tts!(-------------------------)     << 1 | 1
+count_tts!(------------------------)  | 1 << 1 | 1
+count_tts!(------------)         << 1 | 1 << 1 | 1
+count_tts!(------)          << 1 << 1 | 1 << 1 | 1
+count_tts!(---)        << 1 << 1 << 1 | 1 << 1 | 1
+count_tts!(--)     | 1 << 1 << 1 << 1 | 1 << 1 | 1
+count_tts!(-) << 1 | 1 << 1 << 1 << 1 | 1 << 1 | 1
+            1 << 1 | 1 << 1 << 1 << 1 | 1 << 1 | 1
+```
+
+With this approach, the default recursion limit (64) is enough to count up to 2^64 tokens, which is more data than hard drives will be able to hold for the foreseeable future. It is quite fast (twice as fast as the Slice Length, for example, with an input of 100,000 tokens) and it produces a constant expression.
