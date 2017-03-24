@@ -205,7 +205,7 @@ As an exercise, let's take the proposed input and feed it through the rule, to s
         <tr>
             <td colspan="4" style="font-size:.7em;">
 
-<em>Note</em>: there are two ⌂ here, because the next input token might match <em>either</em> the comma separator <em>between</em>em> elements in the repetition, <em>or</em> the comma <em>after</em> the repetition.  The macro system will keep track of both possibilities, until it is able to decide which one to follow.
+<em>Note</em>: there are two ⌂ here, because the next input token might match <em>either</em> the comma separator <em>between</em> elements in the repetition, <em>or</em> the comma <em>after</em> the repetition.  The macro system will keep track of both possibilities, until it is able to decide which one to follow.
 
             </td>
         </tr>
