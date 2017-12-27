@@ -103,7 +103,7 @@ mod c {
 # fn main() {}
 ```
 
-Another complication is that `#[macro_use]` applied to an `extern crate` *does not* behave this way: such declarations are effectively *hoisted* to the top of the module.  Thus, assuming `X!` is defined in an external crate called `mac`, the following holds:
+Another complication is that `#[macro_use]` applied to an `extern crate` *does not* behave this way: such declarations are effectively *hoisted* to the top of the module.  Thus, assuming `X!` is defined in an external crate called `macs`, the following holds:
 
 ```ignore
 mod a {
