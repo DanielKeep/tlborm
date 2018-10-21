@@ -67,6 +67,7 @@ Captures are written as a dollar (`$`) followed by an identifier, a colon (`:`),
 * `path`: a path (e.g. `foo`, `::std::mem::replace`, `transmute::<_, int>`, …)
 * `meta`: a meta item; the things that go inside `#[...]` and `#![...]` attributes
 * `tt`: a single token tree
+* `vis`: a visibility modifier such as `pub` or simply nothing
 
 For example, here is a macro which captures its input as an expression:
 
