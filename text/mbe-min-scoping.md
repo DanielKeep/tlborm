@@ -1,6 +1,6 @@
 % Scoping
 
-The way in which macros are scoped can be somewhat unintuitive.  Firstly, unlike everything else in the languages, macros will remain visible in sub-modules.
+The way in which macros are scoped can be somewhat unintuitive.  Firstly, unlike everything else in the language, macros will remain visible in sub-modules.
 
 ```rust
 macro_rules! X { () => {}; }
