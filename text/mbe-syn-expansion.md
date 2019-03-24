@@ -16,7 +16,7 @@ In fact, it can turn a syntax extension result into any of the following:
 
 In other words, *where* you can invoke a macro determines what its result will be interpreted as.
 
-The compiler will take this AST node and completely replace the macro's invocation node with the output node.  *This is a structural operation*, not a textural one!
+The compiler will take this AST node and completely replace the macro's invocation node with the output node.  *This is a structural operation*, not a textual one!
 
 For example, consider the following:
 
