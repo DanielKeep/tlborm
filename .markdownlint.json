@@ -2,5 +2,6 @@
     "first-line-heading": false,
     "no-trailing-spaces": false,
     "ul-indent": { "indent": 4 },
-    "line-length": false
+    "line-length": false,
+    "no-inline-html": false
 }
