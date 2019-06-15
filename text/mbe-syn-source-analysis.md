@@ -1,6 +1,6 @@
 % Source Analysis
 
-The first stage of compilation for a Rust program is tokenisation.  This is where the source text is transformed into a sequence of tokens (*i.e.* indivisible lexical units; the programming language equivalent of "words").  Rust has various kinds of tokens, such as:
+The first stage of compilation for a Rust program is tokenization.  This is where the source text is transformed into a sequence of tokens (*i.e.* indivisible lexical units; the programming language equivalent of "words").  Rust has various kinds of tokens, such as:
 
 * Identifiers: `foo`, `Bambous`, `self`, `we_can_dance`, `LaCaravane`, …
 * Integers: `42`, `72u32`, `0_______0`, …

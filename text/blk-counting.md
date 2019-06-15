@@ -12,7 +12,7 @@ macro_rules! replace_expr {
 macro_rules! count_tts {
     ($($tts:tt)*) => {0usize $(+ replace_expr!($tts 1usize))*};
 }
-# 
+#
 # fn main() {
 #     assert_eq!(count_tts!(0 1 2), 3);
 # }
@@ -35,13 +35,13 @@ macro_rules! count_tts {
     () => {0usize};
     ($_head:tt $($tail:tt)*) => {1usize + count_tts!($($tail)*)};
 }
-# 
+#
 # fn main() {
 #     assert_eq!(count_tts!(0 1 2), 3);
 # }
 ```
 
-> **Note**: As of `rustc` 1.2, the compiler has *grevious* performance problems when large numbers of integer literals of unknown type must undergo inference.  We are using explicitly `usize`-typed literals here to avoid that.
+> **Note**: As of `rustc` 1.2, the compiler has *grievous* performance problems when large numbers of integer literals of unknown type must undergo inference.  We are using explicitly `usize`-typed literals here to avoid that.
 >
 > If this is not suitable (such as when the type must be substitutable), you can help matters by using `as` (*e.g.* `0 as $ty`, `1 as $ty`, *etc.*).
 
@@ -72,19 +72,19 @@ fn main() {
     assert_eq!(700, count_tts!(
         ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,,
         ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,,
-        
+
         ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,,
         ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,,
-        
+
         ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,,
         ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,,
-        
+
         ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,,
         ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,,
-        
+
         ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,,
         ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,,
-        
+
         // Repetition breaks somewhere after this
         ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,,
         ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,, ,,,,,,,,,,
@@ -109,7 +109,7 @@ macro_rules! replace_expr {
 macro_rules! count_tts {
     ($($tts:tt)*) => {<[()]>::len(&[$(replace_expr!($tts ())),*])};
 }
-# 
+#
 # fn main() {
 #     assert_eq!(count_tts!(0 1 2), 3);
 # }
@@ -134,7 +134,7 @@ macro_rules! count_idents {
         }
     };
 }
-# 
+#
 # fn main() {
 #     const COUNT: u32 = count_idents!(A, B, C);
 #     assert_eq!(COUNT, 3);

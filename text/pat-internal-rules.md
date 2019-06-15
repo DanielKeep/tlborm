@@ -9,7 +9,7 @@ macro_rules! foo {
         foo!(@as_expr $($tts)*)
     };
 }
-# 
+#
 # fn main() {
 #     assert_eq!(foo!(42), 42);
 # }
@@ -25,7 +25,7 @@ The reason for using `@` is that, as of Rust 1.2, the `@` token is *not* used in
 
 Additionally, internal rules will often come *before* any "bare" rules, to avoid issues with `macro_rules!` incorrectly attempting to parse an internal invocation as something it cannot possibly be, such as an expression.
 
-If exporting at least one internal macro is unavoidable (*e.g.* you have many macros that depend on a common set of utility rules), you can use this pattern to combine *all* internal macros into a single uber-macro.
+If exporting at least one internal macro is unavoidable (*e.g.* you have many macros that depend on a common set of utility rules), you can use this pattern to combine *all* internal macros into a single *uber-macro*.
 
 ```ignore
 macro_rules! crate_name_util {
