@@ -6,7 +6,7 @@ There is also the [Macros chapter of the Rust Book](http://doc.rust-lang.org/boo
 
 ## A Little Context
 
-> **Note**: don't panic!  What follows is the only math will be talked about.  You can quite safely skip this section if you just want to get to the meat of the article.
+> **Note**: don't panic!  What follows is the only math that will be talked about.  You can quite safely skip this section if you just want to get to the meat of the article.
 
 If you aren't familiar, a recurrence relation is a sequence where each value is defined in terms of one or more *previous* values, with one or more initial values to get the whole thing started.  For example, the [Fibonacci sequence](https://en.wikipedia.org/wiki/Fibonacci_number) can be defined by the relation:
 
