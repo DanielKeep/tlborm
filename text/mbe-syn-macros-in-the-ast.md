@@ -1,6 +1,6 @@
 % Macros in the AST
 
-As previously mentioned, macro processing in Rust happens *after* the construction of the AST.  As such, the syntax used to invoke a macro *must* be a proper part of the language's syntax.  In fact, there are several "syntax extension" forms which are part of Rust's syntax.  Specifically, the following forms (by way of examples):
+As previously mentioned, macro processing in Rust happens *after* the construction of the AST.  In fact, there are several "syntax extension" forms which are part of Rust's syntax.  Specifically, the following forms (by way of examples):
 
 * `# [ $arg ]`; *e.g.* `#[derive(Clone)]`, `#[no_mangle]`, …
 * `# ! [ $arg ]`; *e.g.* `#![allow(dead_code)]`, `#![crate_name="blang"]`, …
