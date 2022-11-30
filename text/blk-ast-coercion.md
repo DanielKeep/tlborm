@@ -14,7 +14,7 @@ macro_rules! as_ty   { ($t: ty)  => {$t} }
 # as_item!{struct Dummy;}
 # 
 # fn main() {
-#     as_stmt!(let as_pat!(_): as_ty(usize) = as_expr!(42));
+#     as_stmt!(let as_pat!(_): as_ty!(usize) = as_expr!(42));
 
 # }
 ```
